@@ -1,0 +1,57 @@
+{
+  "source": "Unmodified production UI; seeded simulation states",
+  "viewport": {
+    "width": 600,
+    "height": 600
+  },
+  "captures": [
+    {
+      "file": "tactical-combat.png",
+      "seed": 2,
+      "turn": 72,
+      "floor": 3,
+      "phase": "playing",
+      "sha256": "c9bcaf52a896e508bc26dbc62e4bf2752bee52e04a4d5d9b9d95a0f2a04bcf3d"
+    },
+    {
+      "file": "landmark-deal.png",
+      "seed": 1,
+      "turn": 29,
+      "floor": 0,
+      "phase": "encounter",
+      "sha256": "e87cb885c07f8d324ae99c699496cf323f0e0e5a33769fc0d3b82a73b60a3a88"
+    },
+    {
+      "file": "district-upgrade.png",
+      "seed": 2,
+      "turn": 17,
+      "floor": 0,
+      "phase": "upgrade",
+      "sha256": "4edadbaa893a703104e1e1b048fd96f8aedaa475304a2f0b6d712d45b1e65155"
+    },
+    {
+      "file": "starting-kits.png",
+      "seed": 2,
+      "turn": 81,
+      "floor": 3,
+      "phase": "won",
+      "sha256": "87722fd95f11dd867ca0929fb241c5794a7530fb73def7e7384adb30d4fc197d"
+    },
+    {
+      "file": "build-synergies.png",
+      "seed": 2,
+      "turn": 57,
+      "floor": 3,
+      "phase": "playing",
+      "sha256": "ad45bc87f12e7e2a8c6c3c82e8254b221f5a6290769fe73748d19ed7e5437295"
+    },
+    {
+      "file": "offline-ready.png",
+      "seed": 2,
+      "turn": 57,
+      "floor": 3,
+      "phase": "playing",
+      "sha256": "eb8c727f1c249d75692f6b3e3a29590df8b206e33e85b751bf2b55847eac8a8e"
+    }
+  ]
+}
