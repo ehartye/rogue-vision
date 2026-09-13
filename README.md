@@ -4,6 +4,37 @@ A short, turn-based sci-fi roguelike for Meta Ray-Ban Display and the Neural Ban
 
 **Play:** https://ehartye.github.io/rogue-vision/
 
+## Gameplay
+
+[![FOGFALL cover art: a lone courier carries a gold signal into fog-covered San Francisco](media/art/fogfall-cover.png)](media/art/fogfall-cover.png)
+
+**One swipe. One turn.** Cross four haunted districts, read the next strike, and carry your build to the final keynote. Put your hand down whenever you like—the city waits.
+
+The cover is promotional illustration. The screenshots below show the actual 600×600 game UI captured in a desktop browser. Click any image for full resolution.
+
+| Read the next strike | Make the detour count |
+| :--- | :--- |
+| [![The Conductor marks a line of tiles for its next attack](media/screenshots/tactical-combat.png)](media/screenshots/tactical-combat.png) | [![A Ferry Building landmark offers hull repair for a pulse charge](media/screenshots/landmark-deal.png)](media/screenshots/landmark-deal.png) |
+| Coral tiles warn before a strike lands. Move, attack, or disrupt the Conductor with a pulse. | Named landmarks offer optional deals. Check your supplies, accept the tradeoff, or pass safely. |
+
+| Modify your expedition | Carry a different signal |
+| :--- | :--- |
+| [![Three upgrade choices after securing the Embarcadero uplink](media/screenshots/district-upgrade.png)](media/screenshots/district-upgrade.png) | [![Courier, Relay, and Breaker starting kits unlocked](media/screenshots/starting-kits.png)](media/screenshots/starting-kits.png) |
+| Each uplink offers three modifications. Add damage, repairs, capacity, or combat synergies. | Courier balances your tools. Unlock pulse-focused Relay and melee-focused Breaker through cumulative play. |
+
+| Stack your modifications | Take it offline |
+| :--- | :--- |
+| [![Courier build showing two signal amplifiers and a ghost siphon](media/screenshots/build-synergies.png)](media/screenshots/build-synergies.png) | [![Travel readiness shows offline game files and local saving while disconnected](media/screenshots/offline-ready.png)](media/screenshots/offline-ready.png) |
+| Inspect your build without spending a turn. This run pairs stronger pulses with hull recovery on kills. | Cache the game online, then play and resume offline. Runs and earned unlocks stay on the device. |
+
+### Artwork and brand kit
+
+| Square promo | Reusable branding |
+| :---: | :---: |
+| [<img src="media/art/fogfall-promo.png" width="360" alt="FOGFALL square promotional illustration: a gold pulse holds back the infected crowd">](media/art/fogfall-promo.png) | [<img src="media/brand/brand-sheet.svg" width="480" alt="FOGFALL wordmark, feature icons, cyan and gold palette, and typography">](media/brand/brand-sheet.svg) |
+
+[Download and use the media pack](media/README.md): cover and promo PNGs, transparent and monochrome wordmarks, SVG feature and kit icons, PNG avatars, and the full-resolution screenshot gallery.
+
 ## On the glasses
 
 Add the public URL as a Web App in the Meta AI app (Developer Mode enabled). Open it on the glasses while online and wait for **Offline ready**. Start a run, disconnect, then reopen and resume to verify your device is ready for travel. First-time loading needs internet; later visits use the cached game. Device cache eviction or clearing app data requires another online visit.
