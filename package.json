@@ -1,0 +1,17 @@
+{
+  "name": "rogue-vision",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/serve.mjs",
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
+    "@fontsource/oxanium": "^5.3.0",
+    "@playwright/test": "^1.63.0"
+  }
+}
