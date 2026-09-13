@@ -3,94 +3,8 @@ import { newRun, encodeSave } from "../../src/game.js";
 import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-const route = [
-  "right",
-  "right",
-  "right",
-  "right",
-  "down",
-  "right",
-  "right",
-  "right",
-  "right",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "upgrade:blade",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "upgrade:blade",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "down",
-  "right",
-  "down",
-  "down",
-  "right",
-  "right",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "down",
-  "upgrade:siphon",
-  "down",
-  "down",
-  "down",
-  "right",
-  "down",
-  "down",
-  "wait",
-  "wait",
-  "down",
-  "down",
-  "right",
-  "pulse",
-  "pulse",
-  "down",
-  "down",
-  "pulse",
-  "down",
-  "down",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-  "right",
-];
+import fixture from "../fixtures/expedition.json" with { type: "json" };
+const route = fixture.actions;
 test("complete a seeded expedition through every district and boss using only wrist controls", async ({
   page,
 }) => {
@@ -120,6 +34,9 @@ test("complete a seeded expedition through every district and boss using only wr
         await press("ArrowDown");
       }
       await press("Enter");
+    } else if (action.startsWith("encounter:")) {
+      if (action === "encounter:leave") await press("ArrowDown");
+      await press("Enter");
     } else if (action === "pulse" || action === "wait") {
       await press("Enter");
       if (action === "wait") await press("ArrowDown");
@@ -131,12 +48,7 @@ test("complete a seeded expedition through every district and boss using only wr
   const saved = await page.evaluate(
     () => JSON.parse(localStorage.getItem("fogfall.run.v1")).state,
   );
-  expect(saved).toMatchObject({
-    phase: "won",
-    turn: 83,
-    score: 1070,
-    kills: 13,
-  });
+  expect(saved).toMatchObject(fixture.expected);
   for (const b of await page.locator("button").all()) {
     const box = await b.boundingBox();
     expect(box.y + box.height).toBeLessThanOrEqual(592);

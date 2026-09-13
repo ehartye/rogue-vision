@@ -2,6 +2,8 @@ import {
   newRun,
   act,
   chooseUpgrade,
+  chooseEncounter,
+  LANDMARKS,
   encodeSave,
   decodeSave,
   DISTRICTS,
@@ -106,10 +108,12 @@ function render() {
   app.className = "";
   let html = "";
   if (screen === "title") {
-    const active = run && ["playing", "upgrade"].includes(run.phase);
+    const active =
+      run && ["playing", "upgrade", "encounter"].includes(run.phase);
     html = `<section class="screen" data-screen="title"><div class="title-top"><p class="eyebrow">ROGUE VISION / SAN FRANCISCO</p><span class="small muted">BEST ${stats.best}</span></div><h1 class="brand">FOG<span>FALL</span></h1><p class="subtitle">THE CITY LOST ITS SIGNAL. YOU DIDN’T.</p><canvas class="skyline" width="600" height="180" aria-hidden="true"></canvas><p class="title-story">A dead city. A live keynote. Find daylight.</p><div class="title-actions">${button(active ? "resume" : "start", active ? "Resume expedition" : "Enter the fog", active ? `${DISTRICTS[run.floor].name} · Hull ${run.player.hp}/${run.player.maxHp} · Turn ${run.turn}` : "Swipe to move. Pinch for powers.", true)}${button("kit", "Field kit", "Controls, sound & travel readiness")}</div>${foot(storageOk ? "Wrist only · No clock ticking" : saveState)}</section>`;
   } else if (screen === "mission") {
-    if (run.phase === "upgrade") html = upgradeScreen();
+    if (run.phase === "encounter") html = encounterScreen();
+    else if (run.phase === "upgrade") html = upgradeScreen();
     else if (["won", "dead"].includes(run.phase)) html = resultScreen();
     else {
       const d = DISTRICTS[run.floor],
@@ -118,14 +122,14 @@ function render() {
       const threat = run.enemies.some((e) =>
         e.intent.some((t) => t.x === p.x && t.y === p.y),
       );
-      html = `<section class="screen mission" data-screen="mission"><div class="district-top"><p class="eyebrow">${d.tag}</p><span class="small muted">TURN <b data-turn>${run.turn}</b></span></div><div class="mission-header"><h1 class="district-name">${d.name}</h1><span class="sector number">0${run.floor + 1}<span class="muted"> / 04</span></span></div><div class="vitals"><div class="health"><span class="${p.hp <= 6 ? "red" : ""}">HULL <b>${p.hp}</b><span class="muted">/${p.maxHp}</span></span><span class="health-bar"><i style="width:${(100 * p.hp) / p.maxHp}%;${p.hp <= 6 ? "background:var(--red)" : ""}"></i></span></div><span class="gold">ATK ${p.attack}</span><span class="muted">${run.score} PTS</span></div><div class="board-row"><canvas class="map" width="396" height="396" tabindex="0" aria-label="${esc(mapDescription(run))}"></canvas><aside class="sidebar"><div class="side-label">PULSE</div><div class="pulse-dots" aria-label="${p.charges} of ${p.maxCharges} charges">${"◆".repeat(p.charges)}${"◇".repeat(p.maxCharges - p.charges)}</div><div class="small muted">Pinch for actions</div><div class="route">${DISTRICTS.map((district, i) => `<div class="route-stop ${i === run.floor ? "current" : i < run.floor ? "done" : ""}"><i></i>${district.name}</div>`).join("")}</div><div class="threat-note ${threat ? "red" : ""}">${threat ? "! Strike incoming<br>Leave marked tiles" : visible.length ? `${visible.length} hostile${visible.length > 1 ? "s" : ""} in sight` : "No hostiles<br>in sight"}</div><div class="side-bottom">◇ Signal<br>+ Hull kit<br>⇩ Uplink</div></aside></div><p class="mission-message ${run.event === "damage" ? "red" : ""}" role="status">${esc(run.message)}</p>${foot(`Swipe: move / attack · Pinch: actions${storageOk ? "" : " · NOT SAVED"}`)}</section>`;
+      html = `<section class="screen mission" data-screen="mission"><div class="district-top"><p class="eyebrow">${d.tag}</p><span class="small muted">TURN <b data-turn>${run.turn}</b></span></div><div class="mission-header"><h1 class="district-name">${d.name}</h1><span class="sector number">0${run.floor + 1}<span class="muted"> / 04</span></span></div><div class="vitals"><div class="health"><span class="${p.hp <= 6 ? "red" : ""}">HULL <b>${p.hp}</b><span class="muted">/${p.maxHp}</span></span><span class="health-bar"><i style="width:${(100 * p.hp) / p.maxHp}%;${p.hp <= 6 ? "background:var(--red)" : ""}"></i></span></div><span class="gold">ATK ${p.attack}</span><span class="muted">${run.score} PTS</span></div><div class="board-row"><canvas class="map" width="396" height="396" tabindex="0" aria-label="${esc(mapDescription(run))}"></canvas><aside class="sidebar"><div class="side-label">PULSE</div><div class="pulse-dots" aria-label="${p.charges} of ${p.maxCharges} charges">${"◆".repeat(p.charges)}${"◇".repeat(p.maxCharges - p.charges)}</div><div class="small muted">Pinch for actions</div><div class="route">${DISTRICTS.map((district, i) => `<div class="route-stop ${i === run.floor ? "current" : i < run.floor ? "done" : ""}"><i></i>${district.name}</div>`).join("")}</div><div class="threat-note ${threat ? "red" : ""}">${threat ? "! Strike incoming<br>Leave marked tiles" : visible.length ? `${visible.length} hostile${visible.length > 1 ? "s" : ""} in sight` : "No hostiles<br>in sight"}</div><div class="side-bottom">◎ Landmark<br>◇ Signal<br>+ Hull kit<br>⇩ Uplink</div></aside></div><p class="mission-message ${run.event === "damage" ? "red" : ""}" role="status">${esc(run.message)}</p>${foot(`Swipe: move / attack · Pinch: actions${storageOk ? "" : " · NOT SAVED"}`)}</section>`;
       if (run.event === "pulse") app.className = "pulse-flash";
       if (run.event === "damage") app.className = "damage-flash";
     }
   } else if (screen === "actions") {
     html = `<section class="screen" data-screen="actions">${heading("TIME IS HELD", "Choose your next move", "The city moves only when you do.")}<div class="menu-stack tight">${button("pulse", `Discharge pulse · ${run.player.charges} left`, `${run.player.pulseDamage} damage · ${run.player.pulseRange} tiles · disrupts strikes`, true)}${button("wait", "Wait one turn", "Hold position while hostiles act")}${button("guide", "Field guide", "Movement, threats & the mission")}${button("return", "Return to streets", "Keep exploring")}</div>${foot("Swipe to choose · Pinch to act")}</section>`;
   } else if (screen === "kit") {
-    html = `<section class="screen" data-screen="kit">${heading("EXPEDITION EQUIPMENT", "Field kit", "Pack your signal before you travel.")}<div class="menu-stack">${button("guide", "How to play", "A three-page field guide", true)}${button("sound", `Sound: ${sound ? "on" : "off"}`, "Optional synthesized action cues")}${button("diagnostics", "Travel readiness", "Offline cache, save & display checks")}${run && ["playing", "upgrade"].includes(run.phase) ? button("start", "New expedition", "Leave this run and start fresh") : button("return", "Return", "Back to the city")}</div><p class="panel-foot small">Back gesture returns to the title.</p></section>`;
+    html = `<section class="screen" data-screen="kit">${heading("EXPEDITION EQUIPMENT", "Field kit", "Pack your signal before you travel.")}<div class="menu-stack">${button("guide", "How to play", "A three-page field guide", true)}${button("sound", `Sound: ${sound ? "on" : "off"}`, "Optional synthesized action cues")}${button("diagnostics", "Travel readiness", "Offline cache, save & display checks")}${run && ["playing", "upgrade", "encounter"].includes(run.phase) ? button("start", "New expedition", "Leave this run and start fresh") : button("return", "Return", "Back to the city")}</div><p class="panel-foot small">Back gesture returns to the title.</p></section>`;
   } else if (screen === "guide") html = guideScreen();
   else if (screen === "diagnostics") {
     html = `<section class="screen" data-screen="diagnostics">${heading("PRE-FLIGHT CHECK", "Travel readiness")}<div class="diag"><div class="diag-row"><span>Game files</span><span data-offline>${cacheState}</span></div><div class="diag-row"><span>Run storage</span><span>${saveState}</span></div><div class="diag-row"><span>Connection</span><span>${navigator.onLine ? "Online" : "Offline"}</span></div><div class="diag-row"><span>Composition</span><span>600 × 600</span></div><div class="diag-row"><span>Last map draw</span><span>${renderMs.toFixed(1)} ms</span></div><div class="diag-row"><span>Last input</span><span>${esc(lastKey)}</span></div></div><p class="diag-note">Open once on the glasses until “Offline ready”. Then disconnect, reopen, and resume a run before departure. Cache can be removed by the device.</p><div class="guide-next">${button("return", "Return", "Back to the field kit", true)}</div></section>`;
@@ -146,6 +150,10 @@ function render() {
 }
 function upgradeScreen() {
   return `<section class="screen" data-screen="upgrade">${heading("UPLINK SECURED", `${DISTRICTS[run.floor].name} is clear`, "Install one modification. Repair 3 hull.<br>Next stop: " + DISTRICTS[run.floor + 1].name + ".")}<div class="menu-stack">${run.choices.map((id) => button(`upgrade:${id}`, UPGRADES[id].name, UPGRADES[id].text, true)).join("")}</div><p class="panel-foot">Your modifications stack for this expedition.</p>${foot()}</section>`;
+}
+function encounterScreen() {
+  const offer = LANDMARKS[run.floor];
+  return `<section class="screen" data-screen="encounter">${heading(offer.tag, offer.name, offer.text)}<p class="encounter-terms">${offer.terms}</p><p class="encounter-status" role="status">${run.message !== offer.text ? esc(run.message) : `Hull ${run.player.hp}/${run.player.maxHp} · Pulses ${run.player.charges}/${run.player.maxCharges}`}</p><div class="menu-stack">${button("encounter:take", offer.action, "Accept the tradeoff", true)}${button("encounter:leave", "Pass it by", "No reward. No cost. No extra turn.")}</div>${foot()}</section>`;
 }
 function resultScreen() {
   const won = run.phase === "won";
@@ -188,7 +196,7 @@ function guideScreen() {
       ],
       [
         "Build your expedition",
-        "Green kits repair hull. Cells recharge pulses. Choose an upgrade at each uplink.",
+        "Ring markers offer optional landmark deals. Kits repair hull. Choose an upgrade at each uplink.",
       ],
       [
         "End the keynote",
@@ -211,8 +219,16 @@ function start() {
   }
 }
 function dispatch(action) {
+  if (action.startsWith("encounter:")) {
+    chooseEncounter(run, action.slice(10));
+    focusIndex = 0;
+    persist();
+    render();
+    return;
+  }
   if (action === "start") {
-    if (run && ["playing", "upgrade"].includes(run.phase)) go("confirm");
+    if (run && ["playing", "upgrade", "encounter"].includes(run.phase))
+      go("confirm");
     else start();
   } else if (action === "restart") start();
   else if (action === "resume") go("mission");
