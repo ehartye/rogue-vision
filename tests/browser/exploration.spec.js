@@ -25,7 +25,8 @@ test("landmark tradeoffs, passing and offline resume work with only wrist keys",
   await expect(
     page.getByRole("heading", { name: "Ferry Building" }),
   ).toBeVisible();
-  await expect(page.getByText("Spend 1 pulse · repair 7 hull")).toBeVisible();
+  await expect(page.getByText("Spend 1 pulse · repair up to 7 hull")).toBeVisible();
+  await expect(page.getByText("Hull 18/18 · Pulses 0/3")).toBeVisible();
   await press("Enter");
   await expect(
     page.getByText("Not enough resources. You can pass by safely."),

@@ -153,7 +153,7 @@ function upgradeScreen() {
 }
 function encounterScreen() {
   const offer = LANDMARKS[run.floor];
-  return `<section class="screen" data-screen="encounter">${heading(offer.tag, offer.name, offer.text)}<p class="encounter-terms">${offer.terms}</p><p class="encounter-status" role="status">${run.message !== offer.text ? esc(run.message) : "The city waits while you choose."}</p><div class="menu-stack">${button("encounter:take", offer.action, "Accept the tradeoff", true)}${button("encounter:leave", "Pass it by", "No reward. No cost. No extra turn.")}</div>${foot()}</section>`;
+  return `<section class="screen" data-screen="encounter">${heading(offer.tag, offer.name, offer.text)}<p class="encounter-terms">${offer.terms}</p><p class="encounter-status" role="status">${run.message !== offer.text ? esc(run.message) : `Hull ${run.player.hp}/${run.player.maxHp} · Pulses ${run.player.charges}/${run.player.maxCharges}`}</p><div class="menu-stack">${button("encounter:take", offer.action, "Accept the tradeoff", true)}${button("encounter:leave", "Pass it by", "No reward. No cost. No extra turn.")}</div>${foot()}</section>`;
 }
 function resultScreen() {
   const won = run.phase === "won";
