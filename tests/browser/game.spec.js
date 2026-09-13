@@ -92,7 +92,8 @@ test("cached project-path app cold reloads offline and restores the expedition",
   expect(
     await page.evaluate(() => localStorage.getItem("fogfall.run.v1")),
   ).toEqual(save);
-  await press(page, "ArrowRight");
+  // Step back into the guaranteed clear starting area, not a random building.
+  await press(page, "ArrowLeft");
   await expect(page.locator("[data-turn]")).toHaveText("3");
   expect(
     requests.every((url) =>
