@@ -193,25 +193,42 @@ export function drawMap(canvas, s) {
         continue;
       }
       if (s.tiles[y][x] === 1) {
-        c.strokeStyle = visible ? "#497a86" : "#20343c";
+        const accent = ["#497a86", "#82704e", "#597568", "#6f6386"][s.floor];
+        c.strokeStyle = visible ? accent : "#20343c";
         c.lineWidth = 2;
         c.strokeRect(px + 4, py + 4, 27, 27);
         if (visible) {
+          // Pier slats, market awnings, tram rails, and registration booths.
+          const motifs = [
+            [
+              [7, 13],
+              [27, 13],
+              [27, 23],
+              [7, 23],
+            ],
+            [
+              [7, 18],
+              [13, 11],
+              [19, 18],
+              [25, 11],
+            ],
+            [
+              [12, 8],
+              [12, 27],
+              [24, 27],
+              [24, 8],
+            ],
+            [
+              [10, 25],
+              [10, 12],
+              [25, 12],
+              [25, 25],
+            ],
+          ];
           line(
             c,
-            [
-              [px + 5, py + 9],
-              [px + 25, py + 9],
-            ],
-            "#497a86",
-          );
-          line(
-            c,
-            [
-              [px + 9, py + 14],
-              [px + 9, py + 26],
-            ],
-            "#29434b",
+            motifs[s.floor].map(([a, b]) => [px + a, py + b]),
+            accent,
           );
         }
       } else {
@@ -240,6 +257,33 @@ export function drawMap(canvas, s) {
         }
       }
     }
+  if (s.landmark && !s.landmark.resolved) {
+    const x = s.landmark.x * 36 + 18,
+      y = s.landmark.y * 36 + 18;
+    c.strokeStyle = C.gold;
+    c.lineWidth = 3;
+    c.beginPath();
+    c.arc(x, y, 11, 0, Math.PI * 2);
+    c.stroke();
+    line(
+      c,
+      [
+        [x - 4, y],
+        [x + 4, y],
+      ],
+      C.gold,
+      3,
+    );
+    line(
+      c,
+      [
+        [x, y - 4],
+        [x, y + 4],
+      ],
+      C.gold,
+      3,
+    );
+  }
   if (s.seen[s.exit.y][s.exit.x]) {
     const x = s.exit.x * 36,
       y = s.exit.y * 36;

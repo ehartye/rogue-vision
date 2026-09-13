@@ -1,3 +1,4 @@
+import fixture from "../fixtures/expedition.json" with { type: "json" };
 import { test, expect } from "@playwright/test";
 import { newRun, act, encodeSave } from "../../src/game.js";
 const press = async (p, k) => {
@@ -61,26 +62,10 @@ test("small and wide viewports keep the complete composition centered", async ({
 });
 test("upgrade footer text never overlaps the controls", async ({ page }) => {
   const run = newRun(1);
-  for (const action of [
-    "right",
-    "right",
-    "right",
-    "right",
-    "down",
-    "right",
-    "right",
-    "right",
-    "right",
-    "down",
-    "down",
-    "down",
-    "down",
-    "down",
-    "down",
-    "down",
-    "down",
-    "down",
-  ])
+  for (const action of fixture.actions.slice(
+    0,
+    fixture.actions.findIndex((a) => a.startsWith("upgrade:")),
+  ))
     act(run, action);
   expect(run.phase).toBe("upgrade");
   await page.addInitScript(

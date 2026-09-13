@@ -1,4 +1,48 @@
+import { generateDistrict, distances } from "./districts.js";
 export const SIZE = 11;
+export const LANDMARKS = [
+  {
+    name: "Ferry Building",
+    tag: "SEALED SUPPLY LOCKER",
+    text: "A ferry crew left a field kit in a powered locker.",
+    action: "Crank the locker",
+    terms: "Spend 1 pulse · repair 7 hull",
+    charges: 1,
+    heal: 7,
+    score: 35,
+  },
+  {
+    name: "Dragon Gate",
+    tag: "GHOST RELAY",
+    text: "The lantern network can recharge your cells. Its feedback burns.",
+    action: "Boost the relay",
+    terms: "Lose 3 hull · gain 2 pulses + 60 points",
+    hull: 3,
+    cells: 2,
+    score: 60,
+  },
+  {
+    name: "Powell cable car",
+    tag: "LAST SERVICE",
+    text: "Supplies are on board. Opening the doors will draw runners.",
+    action: "Board the car",
+    terms: "Repair 5 hull · attract 2 runners",
+    heal: 5,
+    runners: 2,
+    score: 40,
+  },
+  {
+    name: "Moscone registration",
+    tag: "VIP ACCESS",
+    text: "A forged badge unlocks an experimental blade and repair station.",
+    action: "Spoof a VIP badge",
+    terms: "Spend 2 pulses · +1 attack · repair 6 hull",
+    charges: 2,
+    heal: 6,
+    attack: 1,
+    score: 75,
+  },
+];
 export const DISTRICTS = [
   {
     name: "Embarcadero",
@@ -77,42 +121,23 @@ function shuffle(s, items) {
   }
   return items;
 }
-function connected(tiles) {
-  const seen = new Set(["1,1"]),
-    queue = [{ x: 1, y: 1 }];
-  for (const p of queue)
-    for (const [dx, dy] of Object.values(vectors)) {
-      const x = p.x + dx,
-        y = p.y + dy,
-        k = `${x},${y}`;
-      if (tiles[y]?.[x] === 0 && !seen.has(k)) {
-        seen.add(k);
-        queue.push({ x, y });
-      }
-    }
-  return seen.size === tiles.flat().filter((t) => t === 0).length;
-}
 function buildFloor(s) {
-  s.tiles = Array.from({ length: SIZE }, (_, y) =>
-    Array.from({ length: SIZE }, (_, x) =>
-      x === 0 || y === 0 || x === 10 || y === 10 ? 1 : 0,
-    ),
+  Object.assign(
+    s,
+    generateDistrict(s.floor, () => random(s)),
   );
-  // Remove street cells only if the complete remaining street graph stays connected.
-  for (let i = 0; i < 35; i++) {
-    const x = 2 + Math.floor(random(s) * 7),
-      y = 2 + Math.floor(random(s) * 7);
-    if ((x <= 2 && y <= 2) || (x >= 8 && y >= 8)) continue;
-    s.tiles[y][x] = 1;
-    if (!connected(s.tiles)) s.tiles[y][x] = 0;
-  }
   s.player.x = 1;
   s.player.y = 1;
   s.exit = { x: 9, y: 9 };
   const cells = [];
   for (let y = 1; y < 10; y++)
     for (let x = 1; x < 10; x++)
-      if (s.tiles[y][x] === 0 && x + y > 5 && !(x === 9 && y === 9))
+      if (
+        s.tiles[y][x] === 0 &&
+        x + y > 5 &&
+        !(x === 9 && y === 9) &&
+        !same({ x, y }, s.landmark)
+      )
         cells.push({ x, y });
   shuffle(s, cells);
   s.enemies = [];
@@ -137,7 +162,16 @@ function buildFloor(s) {
       stun: 0,
     });
   }
-  for (const kind of ["med", "med", "cell", "signal", "signal"])
+  const fromStart = distances(s.tiles, { x: 1, y: 1 }),
+    fromExit = distances(s.tiles, s.exit);
+  // Put a supply on an optional side route; shuffled ties keep locations varied.
+  cells.sort(
+    (a, b) =>
+      fromStart.get(`${a.x},${a.y}`) +
+      fromExit.get(`${a.x},${a.y}`) -
+      (fromStart.get(`${b.x},${b.y}`) + fromExit.get(`${b.x},${b.y}`)),
+  );
+  for (const kind of ["med", "cell", "signal", "med", "signal"])
     s.items.push({ ...cells.pop(), kind });
   s.seen = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
   s.visible = [];
@@ -376,6 +410,75 @@ export function act(s, action) {
   if (same(s.player, s.exit))
     s.message = "Uplink jammed. Silence the Conductor first.";
   enemyTurn(s);
+  if (
+    s.phase === "playing" &&
+    s.landmark &&
+    !s.landmark.resolved &&
+    same(s.player, s.landmark)
+  ) {
+    s.phase = "encounter";
+    s.message = LANDMARKS[s.floor].text;
+  }
+  reveal(s);
+  return true;
+}
+export function chooseEncounter(s, choice) {
+  if (
+    s.phase !== "encounter" ||
+    !s.landmark ||
+    s.landmark.resolved ||
+    !["take", "leave"].includes(choice)
+  )
+    return false;
+  const offer = LANDMARKS[s.floor],
+    p = s.player;
+  if (choice === "take") {
+    if (p.charges < (offer.charges ?? 0) || p.hp <= (offer.hull ?? 0)) {
+      s.message = "Not enough resources. You can pass by safely.";
+      return false;
+    }
+    p.charges = Math.min(
+      p.maxCharges,
+      p.charges - (offer.charges ?? 0) + (offer.cells ?? 0),
+    );
+    p.hp = Math.min(p.maxHp, p.hp - (offer.hull ?? 0) + (offer.heal ?? 0));
+    p.attack += offer.attack ?? 0;
+    s.score += offer.score;
+    if (offer.runners) {
+      const cells = [];
+      for (let y = 1; y < 10; y++)
+        for (let x = 1; x < 10; x++) {
+          const cell = { x, y },
+            d = distance(cell, p);
+          if (
+            s.tiles[y][x] === 0 &&
+            d >= 3 &&
+            !same(cell, s.exit) &&
+            !s.enemies.some((e) => same(e, cell)) &&
+            !s.items.some((e) => same(e, cell))
+          )
+            cells.push(cell);
+        }
+      cells.sort((a, b) => distance(a, p) - distance(b, p));
+      for (const cell of cells.slice(0, offer.runners))
+        s.enemies.push({
+          ...cell,
+          id: Math.max(-1, ...s.enemies.map((e) => e.id)) + 1,
+          kind: "runner",
+          hp: 3,
+          maxHp: 3,
+          stun: 0,
+          intent: [],
+        });
+    }
+    s.message = offer.runners
+      ? "Supplies secured. Two runners heard the doors."
+      : `${offer.name}: supplies secured.`;
+  } else s.message = "You leave the landmark untouched.";
+  s.landmark.resolved = true;
+  s.landmark.outcome = choice;
+  s.phase = "playing";
+  s.event = "pickup";
   reveal(s);
   return true;
 }
@@ -428,13 +531,25 @@ export function decodeSave(raw) {
     )
       return null;
     if (
-      !["playing", "upgrade", "dead", "won"].includes(s.phase) ||
+      !["playing", "upgrade", "encounter", "dead", "won"].includes(s.phase) ||
       !grid(s.tiles, (v) => v === 0 || v === 1) ||
       !grid(s.seen, (v) => typeof v === "boolean") ||
       !grid(s.visible, (v) => typeof v === "boolean")
     )
       return null;
     const p = s.player;
+    if (
+      s.landmark !== undefined &&
+      (!pos(s.landmark) ||
+        typeof s.landmark.resolved !== "boolean" ||
+        s.tiles[s.landmark.y]?.[s.landmark.x] !== 0)
+    )
+      return null;
+    if (
+      s.phase === "encounter" &&
+      (!s.landmark || s.landmark.resolved || !same(p, s.landmark))
+    )
+      return null;
     if (
       !pos(p) ||
       s.tiles[p.y][p.x] !== 0 ||

@@ -16,6 +16,7 @@ Scan the [add-to-glasses QR code](assets/add-to-glasses.png) with your phone to 
 - **Pulse:** damages and disrupts nearby hostiles. Every third kill restores one charge.
 - **Coral warning tiles:** a strike lands there next turn. Move away first.
 - **Cyan uplink:** the lower-right exit. Install an upgrade between districts. Defeat the Conductor before the final extraction.
+- **Gold ring:** an optional landmark deal. Inspect the cost, then accept or pass safely. Each district has its own street pattern; supplies reward exploration away from the exit route.
 
 The game waits indefinitely for input. Saves occur at completed turns and upgrade selections. No accounts, telemetry, server, phone controller, sensors, or runtime third-party downloads. Sound is optional and starts disabled. Field kit → Travel readiness reports local cache/save status and the last map draw time; this is not a hardware benchmark.
 
