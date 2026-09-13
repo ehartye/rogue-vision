@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { newRun, act, encodeSave } from "../../src/game.js";
 const press = async (p, k) => {
   await p.keyboard.press(k);
   await p.waitForTimeout(85);
@@ -56,5 +57,43 @@ test("small and wide viewports keep the complete composition centered", async ({
     expect(box.y).toBeGreaterThanOrEqual(-1);
     expect(box.x + box.width).toBeLessThanOrEqual(size.width + 1);
     expect(box.y + box.height).toBeLessThanOrEqual(size.height + 1);
+  }
+});
+test("upgrade footer text never overlaps the controls", async ({ page }) => {
+  const run = newRun(1);
+  for (const action of [
+    "right",
+    "right",
+    "right",
+    "right",
+    "down",
+    "right",
+    "right",
+    "right",
+    "right",
+    "down",
+    "down",
+    "down",
+    "down",
+    "down",
+    "down",
+    "down",
+    "down",
+    "down",
+  ])
+    act(run, action);
+  expect(run.phase).toBe("upgrade");
+  await page.addInitScript(
+    (save) => localStorage.setItem("fogfall.run.v1", save),
+    encodeSave(run),
+  );
+  await page.goto("./");
+  await page.keyboard.press("Enter");
+  await page.evaluate(() => document.fonts.ready);
+  const note = page.locator(".panel-foot");
+  if (await note.count()) {
+    const a = await note.boundingBox(),
+      b = await page.locator(".footline").boundingBox();
+    expect(a.y + a.height).toBeLessThanOrEqual(b.y - 6);
   }
 });

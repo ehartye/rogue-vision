@@ -225,6 +225,9 @@ p {
   font-size: 18px;
   color: var(--muted);
 }
+[data-screen="upgrade"] .panel-foot {
+  bottom: 45px;
+}
 .mission {
   padding: 20px 18px;
 }

@@ -12,7 +12,7 @@ Scan the [add-to-glasses QR code](assets/add-to-glasses.png) with your phone to 
 
 - **Swipe:** move one square; move into a hostile to attack.
 - **Pinch:** open actions, then swipe to choose and pinch to confirm.
-- **Back:** close the current screen. Back from the expedition returns to the title with progress saved; Back at the title is left to the native shell.
+- **Back:** close the current screen with progress saved. Keep going back to reach the title; Back at the title is left to the native shell.
 - **Pulse:** damages and disrupts nearby hostiles. Every third kill restores one charge.
 - **Coral warning tiles:** a strike lands there next turn. Move away first.
 - **Cyan uplink:** the lower-right exit. Install an upgrade between districts. Defeat the Conductor before the final extraction.
