@@ -1,4 +1,5 @@
 import { generateDistrict, distances } from "./districts.js";
+import { KITS } from "./kits.js";
 export const SIZE = 11;
 export const LANDMARKS = [
   {
@@ -100,6 +101,16 @@ export const UPGRADES = {
     text: "+2 pulse damage. Clear the swarm.",
     glyph: "signal",
   },
+  aftershock: {
+    name: "Aftershock blade",
+    text: "+3 melee damage against disrupted hostiles.",
+    glyph: "blade",
+  },
+  kinetic: {
+    name: "Kinetic recovery",
+    text: "+1 charge every second melee strike.",
+    glyph: "cell",
+  },
 };
 export const ENEMIES = {
   husk: { name: "Husk", hp: 5, damage: 2, score: 15 },
@@ -180,9 +191,13 @@ function buildFloor(s) {
   s.event = "arrival";
   reveal(s);
 }
-export function newRun(seed = Date.now() >>> 0) {
+export function newRun(seed = Date.now() >>> 0, kit = "courier") {
+  if (!Object.hasOwn(KITS, kit)) throw Error("Unknown starting kit");
+  const loadout = KITS[kit];
   const s = {
     version: 1,
+    kit,
+    meleeHits: 0,
     seed: seed >>> 0,
     rng: seed >>> 0,
     floor: 0,
@@ -195,12 +210,12 @@ export function newRun(seed = Date.now() >>> 0) {
     player: {
       x: 1,
       y: 1,
-      hp: 18,
-      maxHp: 18,
-      attack: 3,
-      charges: 2,
-      maxCharges: 3,
-      pulseDamage: 4,
+      hp: loadout.hp,
+      maxHp: loadout.hp,
+      attack: loadout.attack,
+      charges: loadout.charges,
+      maxCharges: loadout.maxCharges,
+      pulseDamage: loadout.pulseDamage,
       pulseRange: 2,
       siphon: 0,
     },
@@ -255,6 +270,7 @@ function removeDead(s) {
     s.event = "kill";
   }
   s.enemies = s.enemies.filter((e) => e.hp > 0);
+  return dead.length;
 }
 function enemyTurn(s) {
   for (const e of s.enemies) {
@@ -334,6 +350,7 @@ function enemyTurn(s) {
 }
 export function act(s, action) {
   if (s.phase !== "playing") return false;
+  let melee = false;
   s.event = "move";
   if (vectors[action]) {
     const [dx, dy] = vectors[action],
@@ -345,8 +362,20 @@ export function act(s, action) {
     }
     const enemy = s.enemies.find((e) => same(e, to));
     if (enemy) {
-      enemy.hp -= s.player.attack;
-      s.message = `${ENEMIES[enemy.kind].name} −${s.player.attack} hull.`;
+      melee = true;
+      const damage =
+        s.player.attack +
+        (enemy.stun > 0
+          ? 3 * s.relics.filter((r) => r === "aftershock").length
+          : 0);
+      enemy.hp -= damage;
+      s.meleeHits = (s.meleeHits ?? 0) + 1;
+      if (s.meleeHits % 2 === 0)
+        s.player.charges = Math.min(
+          s.player.maxCharges,
+          s.player.charges + s.relics.filter((r) => r === "kinetic").length,
+        );
+      s.message = `${ENEMIES[enemy.kind].name} −${damage} hull.`;
       s.event = "hit";
     } else {
       Object.assign(s.player, to);
@@ -372,7 +401,11 @@ export function act(s, action) {
     s.event = "wait";
   } else return false;
   s.turn++;
-  removeDead(s);
+  const killed = removeDead(s);
+  if (s.kit === "relay" && action === "pulse" && killed >= 2)
+    s.player.charges = Math.min(s.player.maxCharges, s.player.charges + 1);
+  if (s.kit === "breaker" && melee && killed)
+    s.player.hp = Math.min(s.player.maxHp, s.player.hp + killed);
   const item = s.items.find((i) => same(i, s.player));
   if (item) {
     if (item.kind === "med") {
@@ -514,6 +547,13 @@ export function decodeSave(raw) {
     const integer = (v, min, max) =>
       Number.isInteger(v) && v >= min && v <= max;
     const pos = (p) => p && integer(p.x, 0, 10) && integer(p.y, 0, 10);
+    if (
+      (s.kit !== undefined && !Object.hasOwn(KITS, s.kit)) ||
+      (s.meleeHits !== undefined && !integer(s.meleeHits, 0, 1000000)) ||
+      (s.id !== undefined &&
+        (typeof s.id !== "string" || s.id.length === 0 || s.id.length > 100))
+    )
+      return null;
     const grid = (g, predicate) =>
       Array.isArray(g) &&
       g.length === 11 &&

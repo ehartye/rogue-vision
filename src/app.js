@@ -1,3 +1,14 @@
+import { KITS } from "./kits.js";
+import {
+  newProfile,
+  readProfile,
+  trackRun,
+  creditRun,
+  kitUnlocked,
+  unlockProgress,
+  resumeRun,
+  acknowledgeRun,
+} from "./profile.js";
 import {
   newRun,
   act,
@@ -13,7 +24,8 @@ import { createInputFilter, decodeKey } from "./input.js";
 import { drawMap, drawSkyline, mapDescription } from "./render.js";
 const app = document.querySelector("#app"),
   SAVE = "fogfall.run.v1",
-  STATS = "fogfall.stats.v1";
+  STATS = "fogfall.stats.v1",
+  PROFILE = "fogfall.profile.v1";
 let run = null,
   saveState = "Saved locally",
   cacheState = "Preparing offline",
@@ -22,20 +34,28 @@ let run = null,
   sound = false,
   audio = null,
   guidePage = 0;
-let stats = { runs: 0, wins: 0, best: 0 },
+let profile = newProfile(),
+  recoveryNotice = "",
+  progressNotice = "",
   storageOk = true;
 try {
   const raw = localStorage.getItem(SAVE);
   run = decodeSave(raw);
   if (raw && !run) saveState = "Unreadable save";
-  const stored = JSON.parse(localStorage.getItem(STATS));
-  if (
-    stored &&
-    ["runs", "wins", "best"].every(
-      (k) => Number.isInteger(stored[k]) && stored[k] >= 0,
-    )
-  )
-    stats = stored;
+  let legacy;
+  try {
+    legacy = JSON.parse(localStorage.getItem(STATS));
+  } catch {}
+  const loaded = readProfile(localStorage.getItem(PROFILE), legacy);
+  profile = loaded.profile;
+  if (loaded.recovered)
+    recoveryNotice = "Progress was damaged; recovered old totals.";
+  if (run) {
+    run.id ??= "legacy:" + run.seed;
+    if (!resumeRun(profile, run))
+      recoveryNotice = "Run recovered; new progress will count.";
+    creditRun(profile, run);
+  }
   sound = localStorage.getItem("fogfall.sound") === "on";
 } catch {
   storageOk = false;
@@ -59,8 +79,13 @@ resize();
 addEventListener("resize", resize);
 function persist() {
   try {
-    if (run) localStorage.setItem(SAVE, encodeSave(run));
-    localStorage.setItem(STATS, JSON.stringify(stats));
+    if (run) creditRun(profile, run);
+    // Award receipt first: replaying a stale run after an interrupted write is safe.
+    localStorage.setItem(PROFILE, JSON.stringify(profile));
+    if (run) {
+      localStorage.setItem(SAVE, encodeSave(run));
+      acknowledgeRun(profile, run);
+    }
     storageOk = true;
     saveState = "Saved locally";
   } catch {
@@ -93,12 +118,7 @@ addEventListener("popstate", (e) => {
   render();
 });
 function settleAction(action) {
-  const previous = run.phase;
   act(run, action);
-  if (previous === "playing" && ["dead", "won"].includes(run.phase)) {
-    stats.best = Math.max(stats.best, run.score);
-    if (run.phase === "won") stats.wins++;
-  }
   persist();
   beep(run.event);
   render();
@@ -110,7 +130,7 @@ function render() {
   if (screen === "title") {
     const active =
       run && ["playing", "upgrade", "encounter"].includes(run.phase);
-    html = `<section class="screen" data-screen="title"><div class="title-top"><p class="eyebrow">ROGUE VISION / SAN FRANCISCO</p><span class="small muted">BEST ${stats.best}</span></div><h1 class="brand">FOG<span>FALL</span></h1><p class="subtitle">THE CITY LOST ITS SIGNAL. YOU DIDN’T.</p><canvas class="skyline" width="600" height="180" aria-hidden="true"></canvas><p class="title-story">A dead city. A live keynote. Find daylight.</p><div class="title-actions">${button(active ? "resume" : "start", active ? "Resume expedition" : "Enter the fog", active ? `${DISTRICTS[run.floor].name} · Hull ${run.player.hp}/${run.player.maxHp} · Turn ${run.turn}` : "Swipe to move. Pinch for powers.", true)}${button("kit", "Field kit", "Controls, sound & travel readiness")}</div>${foot(storageOk ? "Wrist only · No clock ticking" : saveState)}</section>`;
+    html = `<section class="screen" data-screen="title"><div class="title-top"><p class="eyebrow">ROGUE VISION / SAN FRANCISCO</p><span class="small muted">BEST ${profile.best}</span></div><h1 class="brand">FOG<span>FALL</span></h1><p class="subtitle">THE CITY LOST ITS SIGNAL. YOU DIDN’T.</p><canvas class="skyline" width="600" height="180" aria-hidden="true"></canvas><p class="title-story">A dead city. A live keynote. Find daylight.</p><div class="title-actions">${button(active ? "resume" : "start", active ? "Resume expedition" : "Enter the fog", recoveryNotice || (active ? `${DISTRICTS[run.floor].name} · Hull ${run.player.hp}/${run.player.maxHp} · Turn ${run.turn}` : "Swipe to move. Pinch for powers."), true)}${button("kit", "Field kit", "Controls, sound & travel readiness")}</div>${foot(storageOk ? "Wrist only · No clock ticking" : saveState)}</section>`;
   } else if (screen === "mission") {
     if (run.phase === "encounter") html = encounterScreen();
     else if (run.phase === "upgrade") html = upgradeScreen();
@@ -126,13 +146,15 @@ function render() {
       if (run.event === "pulse") app.className = "pulse-flash";
       if (run.event === "damage") app.className = "damage-flash";
     }
-  } else if (screen === "actions") {
-    html = `<section class="screen" data-screen="actions">${heading("TIME IS HELD", "Choose your next move", "The city moves only when you do.")}<div class="menu-stack tight">${button("pulse", `Discharge pulse · ${run.player.charges} left`, `${run.player.pulseDamage} damage · ${run.player.pulseRange} tiles · disrupts strikes`, true)}${button("wait", "Wait one turn", "Hold position while hostiles act")}${button("guide", "Field guide", "Movement, threats & the mission")}${button("return", "Return to streets", "Keep exploring")}</div>${foot("Swipe to choose · Pinch to act")}</section>`;
+  } else if (screen === "loadout") html = loadoutScreen();
+  else if (screen === "build") html = buildScreen();
+  else if (screen === "actions") {
+    html = `<section class="screen" data-screen="actions">${heading("TIME IS HELD", "Choose your next move", "The city moves only when you do.")}<div class="menu-stack tight">${button("pulse", `Discharge pulse · ${run.player.charges} left`, `${run.player.pulseDamage} damage · ${run.player.pulseRange} tiles · disrupts strikes`, true)}${button("wait", "Wait one turn", "Hold position while hostiles act")}${button("build", "Your build", "Starting kit, upgrades & synergies")}${button("return", "Return to streets", "Keep exploring")}</div>${foot("Swipe to choose · Pinch to act")}</section>`;
   } else if (screen === "kit") {
-    html = `<section class="screen" data-screen="kit">${heading("EXPEDITION EQUIPMENT", "Field kit", "Pack your signal before you travel.")}<div class="menu-stack">${button("guide", "How to play", "A three-page field guide", true)}${button("sound", `Sound: ${sound ? "on" : "off"}`, "Optional synthesized action cues")}${button("diagnostics", "Travel readiness", "Offline cache, save & display checks")}${run && ["playing", "upgrade", "encounter"].includes(run.phase) ? button("start", "New expedition", "Leave this run and start fresh") : button("return", "Return", "Back to the city")}</div><p class="panel-foot small">Back gesture returns to the title.</p></section>`;
+    html = `<section class="screen" data-screen="kit">${heading("EXPEDITION EQUIPMENT", "Field kit", recoveryNotice || "Pack your signal before you travel.")}<div class="menu-stack">${button("guide", "How to play", "A three-page field guide", true)}${button("sound", `Sound: ${sound ? "on" : "off"}`, "Optional synthesized action cues")}${button("diagnostics", "Travel readiness", "Offline cache, save & display checks")}${run && ["playing", "upgrade", "encounter"].includes(run.phase) ? button("start", "New expedition", "Leave this run and start fresh") : button("return", "Return", "Back to the city")}</div><p class="panel-foot small">Back gesture returns to the title.</p></section>`;
   } else if (screen === "guide") html = guideScreen();
   else if (screen === "diagnostics") {
-    html = `<section class="screen" data-screen="diagnostics">${heading("PRE-FLIGHT CHECK", "Travel readiness")}<div class="diag"><div class="diag-row"><span>Game files</span><span data-offline>${cacheState}</span></div><div class="diag-row"><span>Run storage</span><span>${saveState}</span></div><div class="diag-row"><span>Connection</span><span>${navigator.onLine ? "Online" : "Offline"}</span></div><div class="diag-row"><span>Composition</span><span>600 × 600</span></div><div class="diag-row"><span>Last map draw</span><span>${renderMs.toFixed(1)} ms</span></div><div class="diag-row"><span>Last input</span><span>${esc(lastKey)}</span></div></div><p class="diag-note">Open once on the glasses until “Offline ready”. Then disconnect, reopen, and resume a run before departure. Cache can be removed by the device.</p><div class="guide-next">${button("return", "Return", "Back to the field kit", true)}</div></section>`;
+    html = `<section class="screen" data-screen="diagnostics">${heading("PRE-FLIGHT CHECK", "Travel readiness")}<div class="diag"><div class="diag-row"><span>Game files</span><span data-offline>${cacheState}</span></div><div class="diag-row"><span>Run & unlocks</span><span>${saveState}</span></div><div class="diag-row"><span>Connection</span><span>${navigator.onLine ? "Online" : "Offline"}</span></div><div class="diag-row"><span>Composition</span><span>600 × 600</span></div><div class="diag-row"><span>Last map draw</span><span>${renderMs.toFixed(1)} ms</span></div><div class="diag-row"><span>Last input</span><span>${esc(lastKey)}</span></div></div><p class="diag-note">Open once on the glasses until “Offline ready”. Then disconnect, reopen, and resume a run before departure. Cache can be removed by the device.</p><div class="guide-next">${button("return", "Return", "Back to the field kit", true)}</div></section>`;
   } else if (screen === "confirm") {
     html = `<section class="screen">${heading("NEW EXPEDITION", "Leave this signal behind?", "Starting over replaces the current run.")}<div class="menu-stack">${button("return", "Keep this run", "Return without losing progress", true)}${button("restart", "Start a new run", "A different city layout awaits")}</div></section>`;
   }
@@ -157,7 +179,7 @@ function encounterScreen() {
 }
 function resultScreen() {
   const won = run.phase === "won";
-  return `<section class="screen" data-screen="${won ? "won" : "dead"}">${heading(won ? "TRANSMISSION RESTORED" : "TRANSMISSION ENDED", won ? "Good morning, San Francisco." : "Lost in the fog.")}<p class="debrief-story">${won ? "The keynote falls silent. Ferries answer the radio. For once, the future can wait." : "Your signal fades, but the route is still out there. A fresh expedition means a different city."}</p><div class="stat-grid"><div><span class="number">${run.score}</span>Signal score</div><div><span class="number">${run.turn}</span>Turns survived</div><div><span class="number">${run.kills}</span>Disconnected</div><div><span class="number">${run.floor + 1} / 4</span>District reached</div></div><div class="result-actions">${button("start", "Another expedition", "New streets. New choices.", true)}${button("return", "Return", "Your best signal is saved")}</div></section>`;
+  return `<section class="screen" data-screen="${won ? "won" : "dead"}">${heading(won ? "TRANSMISSION RESTORED" : "TRANSMISSION ENDED", won ? "Good morning, San Francisco." : "Lost in the fog.")}<p class="debrief-story">${won ? "The keynote falls silent. Ferries answer the radio. For once, the future can wait." : "Your signal fades, but the route is still out there. A fresh expedition means a different city."}</p><div class="stat-grid"><div><span class="number">${run.score}</span>Signal score</div><div><span class="number">${run.turn}</span>Turns survived</div><div><span class="number">${run.kills}</span>Disconnected</div><div><span class="number">${run.floor + 1} / 4</span>District reached</div></div><p class="progress-note">${progressSummary()}</p><div class="result-actions">${button("start", "Another expedition", "New streets. New choices.", true)}${button("return", "Return", "Your best signal is saved")}</div></section>`;
 }
 function guideScreen() {
   const pages = [
@@ -206,9 +228,55 @@ function guideScreen() {
   ];
   return `<section class="screen" data-screen="guide">${heading(`FIELD GUIDE / 0${guidePage + 1} OF 03`, "Stay on the air")}<div class="guide-copy">${pages[guidePage].map(([title, body]) => `<div><h3>${title}</h3><p>${body}</p></div>`).join("")}</div><div class="guide-next">${button("next-guide", guidePage === 2 ? "Ready to go" : "Next page", guidePage === 2 ? "Return to your expedition" : "Pinch to continue", true)}</div><p class="panel-foot small">Back gesture returns without spending a turn.</p></section>`;
 }
-function start() {
-  run = newRun(crypto.getRandomValues(new Uint32Array(1))[0]);
-  stats.runs++;
+function selectLoadout() {
+  progressNotice = "";
+  if (screen === "title") go("loadout");
+  else {
+    screen = "loadout";
+    focusIndex = 0;
+    history.replaceState({ screen, focus: 0 }, "");
+    render();
+  }
+}
+function progressSummary() {
+  return ["relay", "breaker"]
+    .map((id) => KITS[id].name + ": " + unlockProgress(profile, id))
+    .join(" · ");
+}
+function loadoutScreen() {
+  return `<section class="screen" data-screen="loadout">${heading("CHOOSE YOUR STARTING KIT", "Carry a different signal", "Unlocks stay on this device. Every run counts.")}<div class="menu-stack loadouts">${Object.entries(
+    KITS,
+  )
+    .map(([id, k]) =>
+      button(
+        "kit:" + id,
+        k.name + (kitUnlocked(profile, id) ? "" : " · Locked"),
+        k.hp +
+          " hull · " +
+          k.attack +
+          " attack · " +
+          k.charges +
+          "/" +
+          k.maxCharges +
+          " pulses<br>" +
+          (kitUnlocked(profile, id) ? k.role : unlockProgress(profile, id)),
+        id === "courier",
+      ),
+    )
+    .join(
+      "",
+    )}</div><p class="loadout-note" role="status">${esc(progressNotice || "Swipe to inspect. Pinch to begin. Back to cancel.")}</p>${foot(storageOk ? "Local unlocks · No account" : "Progress is not saved")}</section>`;
+}
+function buildScreen() {
+  const k = KITS[run.kit ?? "courier"],
+    p = run.player;
+  return `<section class="screen" data-screen="build">${heading("TIME IS HELD", k.name + " build", k.passive)}<p class="build-stats">Attack ${p.attack} · Pulse ${p.pulseDamage} damage / ${p.pulseRange} tiles<br>Hull ${p.hp}/${p.maxHp} · Charges ${p.charges}/${p.maxCharges}</p><div class="build-mods">${run.relics.length ? run.relics.map((id) => " <div><h3>" + UPGRADES[id].name + "</h3><p>" + UPGRADES[id].text + "</p></div>").join("") : "<p>Secure an uplink to install your first modification.</p>"}</div><div class="guide-next">${button("return", "Return to actions", "No turn spent", true)}</div></section>`;
+}
+function start(kit) {
+  if (!kitUnlocked(profile, kit)) return;
+  run = newRun(crypto.getRandomValues(new Uint32Array(1))[0], kit);
+  run.id = crypto.randomUUID();
+  trackRun(profile, run);
   persist();
   if (screen === "title") go("mission");
   else {
@@ -229,8 +297,20 @@ function dispatch(action) {
   if (action === "start") {
     if (run && ["playing", "upgrade", "encounter"].includes(run.phase))
       go("confirm");
-    else start();
-  } else if (action === "restart") start();
+    else selectLoadout();
+  } else if (action === "restart") selectLoadout();
+  else if (action.startsWith("kit:")) {
+    const kit = action.slice(4);
+    if (kitUnlocked(profile, kit)) start(kit);
+    else {
+      progressNotice =
+        KITS[kit].name +
+        ": " +
+        unlockProgress(profile, kit) +
+        ". Every run contributes.";
+      render();
+    }
+  } else if (action === "build") go("build");
   else if (action === "resume") go("mission");
   else if (action === "kit") go("kit");
   else if (action === "guide") {
@@ -278,6 +358,16 @@ app.addEventListener("focusin", (e) => {
   const buttons = [...app.querySelectorAll("button")];
   const i = buttons.indexOf(e.target);
   if (i >= 0) focusIndex = i;
+  const kit = e.target.dataset.action?.startsWith("kit:")
+    ? e.target.dataset.action.slice(4)
+    : null;
+  if (screen === "loadout" && kit && KITS[kit]) {
+    const note = app.querySelector(".loadout-note");
+    if (note)
+      note.textContent = progressNotice.startsWith(KITS[kit].name + ":")
+        ? progressNotice
+        : KITS[kit].passive;
+  }
 });
 const filter = createInputFilter();
 addEventListener(
@@ -403,6 +493,7 @@ addEventListener("offline", () => {
   checkCache();
   if (screen === "diagnostics") render();
 });
+if (run) persist();
 render();
 prepareOffline();
 document.fonts.ready.then(() => {

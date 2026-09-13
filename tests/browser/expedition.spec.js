@@ -10,7 +10,7 @@ test("complete a seeded expedition through every district and boss using only wr
 }) => {
   await page.addInitScript(
     (save) => localStorage.setItem("fogfall.run.v1", save),
-    encodeSave(newRun(1)),
+    encodeSave(newRun(fixture.seed)),
   );
   await page.goto("./");
   await page.evaluate(() => document.fonts.ready);
@@ -56,6 +56,7 @@ test("complete a seeded expedition through every district and boss using only wr
   await mkdir(".artifacts", { recursive: true });
   await page.screenshot({ path: ".artifacts/victory.png" });
   await press("Enter");
+  await press("Enter");
   await expect(page.locator("[data-turn]")).toHaveText("0");
 });
 
@@ -68,6 +69,8 @@ test("storage denial and cache loss are visible without preventing play", async 
     };
   });
   await page.goto("./");
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(80);
   await page.keyboard.press("Enter");
   await expect(page.locator(".footline")).toContainText("NOT SAVED");
   await expect(page.locator("[data-offline]")).toHaveText("Offline ready");
@@ -90,6 +93,8 @@ test("saved cache and expedition survive a complete browser shutdown and offline
     const page = context.pages()[0];
     await page.goto("http://127.0.0.1:4173/rogue-vision/");
     await expect(page.locator("[data-offline]")).toHaveText("Offline ready");
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(80);
     await page.keyboard.press("Enter");
     await page.keyboard.press("ArrowRight");
     await expect(page.locator("[data-turn]")).toHaveText("1");

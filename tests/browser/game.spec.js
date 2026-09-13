@@ -3,7 +3,7 @@ const press = async (page, key) => {
   await page.keyboard.press(key);
   await page.waitForTimeout(85);
 };
-test("a run, action menu, help, and resume are usable with wrist-equivalent keys only", async ({
+test("a run, action menu, build, and resume are usable with wrist-equivalent keys only", async ({
   page,
 }) => {
   const errors = [];
@@ -12,6 +12,8 @@ test("a run, action menu, help, and resume are usable with wrist-equivalent keys
   await expect(
     page.getByRole("button", { name: "Enter the fog" }),
   ).toBeFocused();
+  await press(page, "Enter");
+  await expect(page.locator('[data-screen="loadout"]')).toBeVisible();
   await press(page, "Enter");
   await expect(page.locator('[data-screen="mission"]')).toBeVisible();
   const before = await page.locator("[data-turn]").textContent();
@@ -25,7 +27,7 @@ test("a run, action menu, help, and resume are usable with wrist-equivalent keys
   await press(page, "ArrowDown");
   await press(page, "Enter");
   await expect(
-    page.getByRole("heading", { name: "Stay on the air" }),
+    page.getByRole("heading", { name: "Courier build" }),
   ).toBeVisible();
   await press(page, "Escape");
   await press(page, "Escape");
@@ -42,6 +44,7 @@ test("legacy wrist keys move once and unidentified precursor consumes nothing", 
   page,
 }) => {
   await page.goto("./");
+  await press(page, "Enter");
   await press(page, "Enter");
   const turn = await page.locator("[data-turn]").textContent();
   await page.evaluate(() =>
@@ -76,6 +79,7 @@ test("cached project-path app cold reloads offline and restores the expedition",
   await expect(page.locator("[data-offline]")).toHaveText("Offline ready", {
     timeout: 15000,
   });
+  await press(page, "Enter");
   await press(page, "Enter");
   await press(page, "ArrowRight");
   await press(page, "ArrowDown");
