@@ -1,181 +1,501 @@
-export const SIZE=11;
-export const DISTRICTS=[
-  {name:'Embarcadero',tag:'THE LAST FERRY',story:'The ferries stopped. The fog did not. Find the uplink.',color:'#80e8ff'},
-  {name:'Chinatown',tag:'GHOST CIRCUIT',story:'Lanterns flicker in sync. Something is listening.',color:'#ffd278'},
-  {name:'Market Street',tag:'DEAD TRANSIT',story:'The last tram is carrying an empty crowd.',color:'#a1f3ce'},
-  {name:'Moscone',tag:'THE FINAL KEYNOTE',story:'Dreamforce is still live. Silence the Conductor.',color:'#eea9ff'},
+export const SIZE = 11;
+export const DISTRICTS = [
+  {
+    name: "Embarcadero",
+    tag: "THE LAST FERRY",
+    story: "The ferries stopped. The fog did not. Find the uplink.",
+    color: "#80e8ff",
+  },
+  {
+    name: "Chinatown",
+    tag: "GHOST CIRCUIT",
+    story: "Lanterns flicker in sync. Something is listening.",
+    color: "#ffd278",
+  },
+  {
+    name: "Market Street",
+    tag: "DEAD TRANSIT",
+    story: "The last tram is carrying an empty crowd.",
+    color: "#a1f3ce",
+  },
+  {
+    name: "Moscone",
+    tag: "THE FINAL KEYNOTE",
+    story: "Dreamforce is still live. Silence the Conductor.",
+    color: "#eea9ff",
+  },
 ];
-export const UPGRADES={
-  blade:{name:'Monofilament',text:'+1 attack. Cut through the crowd.',glyph:'blade'},
-  shell:{name:'Ferry plating',text:'+6 maximum hull. Repair 6 hull.',glyph:'shield'},
-  siphon:{name:'Ghost siphon',text:'Recover 1 hull with every kill.',glyph:'siphon'},
-  arc:{name:'Wideband pulse',text:'+1 pulse range. Reach around corners.',glyph:'pulse'},
-  capacitor:{name:'Spare cell',text:'+1 pulse capacity. Refill all charges.',glyph:'cell'},
-  power:{name:'Signal amplifier',text:'+2 pulse damage. Clear the swarm.',glyph:'signal'},
+export const UPGRADES = {
+  blade: {
+    name: "Monofilament",
+    text: "+1 attack. Cut through the crowd.",
+    glyph: "blade",
+  },
+  shell: {
+    name: "Ferry plating",
+    text: "+6 maximum hull. Repair 6 hull.",
+    glyph: "shield",
+  },
+  siphon: {
+    name: "Ghost siphon",
+    text: "Recover 1 hull with every kill.",
+    glyph: "siphon",
+  },
+  arc: {
+    name: "Wideband pulse",
+    text: "+1 pulse range. Reach around corners.",
+    glyph: "pulse",
+  },
+  capacitor: {
+    name: "Spare cell",
+    text: "+1 pulse capacity. Refill all charges.",
+    glyph: "cell",
+  },
+  power: {
+    name: "Signal amplifier",
+    text: "+2 pulse damage. Clear the swarm.",
+    glyph: "signal",
+  },
 };
-export const ENEMIES={
-  husk:{name:'Husk',hp:5,damage:2,score:15},
-  runner:{name:'Runner',hp:3,damage:2,score:20},
-  spitter:{name:'Relay',hp:4,damage:3,score:25},
-  conductor:{name:'Conductor',hp:20,damage:4,score:150},
+export const ENEMIES = {
+  husk: { name: "Husk", hp: 5, damage: 2, score: 15 },
+  runner: { name: "Runner", hp: 3, damage: 2, score: 20 },
+  spitter: { name: "Relay", hp: 4, damage: 3, score: 25 },
+  conductor: { name: "Conductor", hp: 20, damage: 4, score: 150 },
 };
-const vectors={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1]};
-const distance=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
-const same=(a,b)=>a.x===b.x&&a.y===b.y;
-function random(s) {s.rng=(Math.imul(1664525,s.rng)+1013904223)>>>0;return s.rng/4294967296;}
-function shuffle(s,items) {for(let i=items.length-1;i>0;i--){const j=Math.floor(random(s)*(i+1));[items[i],items[j]]=[items[j],items[i]];}return items;}
-function connected(tiles) {
-  const seen=new Set(['1,1']),queue=[{x:1,y:1}];
-  for(const p of queue) for(const [dx,dy] of Object.values(vectors)) {
-    const x=p.x+dx,y=p.y+dy,k=`${x},${y}`;
-    if(tiles[y]?.[x]===0&&!seen.has(k)) {seen.add(k);queue.push({x,y});}
+const vectors = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+const same = (a, b) => a.x === b.x && a.y === b.y;
+function random(s) {
+  s.rng = (Math.imul(1664525, s.rng) + 1013904223) >>> 0;
+  return s.rng / 4294967296;
+}
+function shuffle(s, items) {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(random(s) * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
   }
-  return seen.size===tiles.flat().filter(t=>t===0).length;
+  return items;
+}
+function connected(tiles) {
+  const seen = new Set(["1,1"]),
+    queue = [{ x: 1, y: 1 }];
+  for (const p of queue)
+    for (const [dx, dy] of Object.values(vectors)) {
+      const x = p.x + dx,
+        y = p.y + dy,
+        k = `${x},${y}`;
+      if (tiles[y]?.[x] === 0 && !seen.has(k)) {
+        seen.add(k);
+        queue.push({ x, y });
+      }
+    }
+  return seen.size === tiles.flat().filter((t) => t === 0).length;
 }
 function buildFloor(s) {
-  s.tiles=Array.from({length:SIZE},(_,y)=>Array.from({length:SIZE},(_,x)=>x===0||y===0||x===10||y===10?1:0));
+  s.tiles = Array.from({ length: SIZE }, (_, y) =>
+    Array.from({ length: SIZE }, (_, x) =>
+      x === 0 || y === 0 || x === 10 || y === 10 ? 1 : 0,
+    ),
+  );
   // Remove street cells only if the complete remaining street graph stays connected.
-  for(let i=0;i<35;i++) {
-    const x=2+Math.floor(random(s)*7),y=2+Math.floor(random(s)*7);
-    if((x<=2&&y<=2)||(x>=8&&y>=8))continue;
-    s.tiles[y][x]=1;if(!connected(s.tiles))s.tiles[y][x]=0;
+  for (let i = 0; i < 35; i++) {
+    const x = 2 + Math.floor(random(s) * 7),
+      y = 2 + Math.floor(random(s) * 7);
+    if ((x <= 2 && y <= 2) || (x >= 8 && y >= 8)) continue;
+    s.tiles[y][x] = 1;
+    if (!connected(s.tiles)) s.tiles[y][x] = 0;
   }
-  s.player.x=1;s.player.y=1;s.exit={x:9,y:9};
-  const cells=[];
-  for(let y=1;y<10;y++)for(let x=1;x<10;x++)if(s.tiles[y][x]===0&&x+y>5&&!(x===9&&y===9))cells.push({x,y});
-  shuffle(s,cells);
-  s.enemies=[];s.items=[];
-  for(let i=0;i<4+s.floor;i++) {
-    const kind=i===0&&s.floor===3?'conductor':i%3===2&&s.floor>0?'spitter':i%3===1?'runner':'husk';
-    const hp=ENEMIES[kind].hp;
-    s.enemies.push({...cells.pop(),id:i,kind,hp,maxHp:hp,intent:[],stun:0});
+  s.player.x = 1;
+  s.player.y = 1;
+  s.exit = { x: 9, y: 9 };
+  const cells = [];
+  for (let y = 1; y < 10; y++)
+    for (let x = 1; x < 10; x++)
+      if (s.tiles[y][x] === 0 && x + y > 5 && !(x === 9 && y === 9))
+        cells.push({ x, y });
+  shuffle(s, cells);
+  s.enemies = [];
+  s.items = [];
+  for (let i = 0; i < 4 + s.floor; i++) {
+    const kind =
+      i === 0 && s.floor === 3
+        ? "conductor"
+        : i % 3 === 2 && s.floor > 0
+          ? "spitter"
+          : i % 3 === 1
+            ? "runner"
+            : "husk";
+    const hp = ENEMIES[kind].hp;
+    s.enemies.push({
+      ...cells.pop(),
+      id: i,
+      kind,
+      hp,
+      maxHp: hp,
+      intent: [],
+      stun: 0,
+    });
   }
-  for(const kind of ['med','med','cell','signal','signal'])s.items.push({...cells.pop(),kind});
-  s.seen=Array.from({length:SIZE},()=>Array(SIZE).fill(false));s.visible=[];
-  s.phase='playing';s.message=DISTRICTS[s.floor].story;s.event='arrival';reveal(s);
+  for (const kind of ["med", "med", "cell", "signal", "signal"])
+    s.items.push({ ...cells.pop(), kind });
+  s.seen = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
+  s.visible = [];
+  s.phase = "playing";
+  s.message = DISTRICTS[s.floor].story;
+  s.event = "arrival";
+  reveal(s);
 }
-export function newRun(seed=Date.now()>>>0) {
-  const s={version:1,seed:seed>>>0,rng:seed>>>0,floor:0,turn:0,kills:0,score:0,phase:'playing',relics:[],choices:[],
-    player:{x:1,y:1,hp:18,maxHp:18,attack:3,charges:2,maxCharges:3,pulseDamage:4,pulseRange:2,siphon:0},message:'',event:'arrival'};
-  buildFloor(s);return s;
+export function newRun(seed = Date.now() >>> 0) {
+  const s = {
+    version: 1,
+    seed: seed >>> 0,
+    rng: seed >>> 0,
+    floor: 0,
+    turn: 0,
+    kills: 0,
+    score: 0,
+    phase: "playing",
+    relics: [],
+    choices: [],
+    player: {
+      x: 1,
+      y: 1,
+      hp: 18,
+      maxHp: 18,
+      attack: 3,
+      charges: 2,
+      maxCharges: 3,
+      pulseDamage: 4,
+      pulseRange: 2,
+      siphon: 0,
+    },
+    message: "",
+    event: "arrival",
+  };
+  buildFloor(s);
+  return s;
 }
-function lineClear(s,a,b) {
-  let x=a.x,y=a.y;
-  const dx=Math.abs(b.x-x),dy=Math.abs(b.y-y),sx=x<b.x?1:-1,sy=y<b.y?1:-1;
-  let error=dx-dy;
-  while(x!==b.x||y!==b.y){const e=error*2;if(e>-dy){error-=dy;x+=sx;}if(e<dx){error+=dx;y+=sy;}if(x===b.x&&y===b.y)return true;if(s.tiles[y]?.[x]!==0)return false;}
+function lineClear(s, a, b) {
+  let x = a.x,
+    y = a.y;
+  const dx = Math.abs(b.x - x),
+    dy = Math.abs(b.y - y),
+    sx = x < b.x ? 1 : -1,
+    sy = y < b.y ? 1 : -1;
+  let error = dx - dy;
+  while (x !== b.x || y !== b.y) {
+    const e = error * 2;
+    if (e > -dy) {
+      error -= dy;
+      x += sx;
+    }
+    if (e < dx) {
+      error += dx;
+      y += sy;
+    }
+    if (x === b.x && y === b.y) return true;
+    if (s.tiles[y]?.[x] !== 0) return false;
+  }
   return true;
 }
 export function reveal(s) {
-  s.visible=Array.from({length:SIZE},()=>Array(SIZE).fill(false));
-  for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++)if(distance(s.player,{x,y})<=5&&lineClear(s,s.player,{x,y}))s.visible[y][x]=s.seen[y][x]=true;
+  s.visible = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
+  for (let y = 0; y < SIZE; y++)
+    for (let x = 0; x < SIZE; x++)
+      if (distance(s.player, { x, y }) <= 5 && lineClear(s, s.player, { x, y }))
+        s.visible[y][x] = s.seen[y][x] = true;
 }
 function removeDead(s) {
-  const dead=s.enemies.filter(e=>e.hp<=0);
-  for(const e of dead) {
-    s.kills++;s.score+=ENEMIES[e.kind].score;
-    s.player.hp=Math.min(s.player.maxHp,s.player.hp+s.player.siphon);
-    if(s.kills%3===0)s.player.charges=Math.min(s.player.maxCharges,s.player.charges+1);
-    s.message=e.kind==='conductor'?'The keynote is silent. Reach the uplink.':`${ENEMIES[e.kind].name} disconnected.`;
-    s.event='kill';
+  const dead = s.enemies.filter((e) => e.hp <= 0);
+  for (const e of dead) {
+    s.kills++;
+    s.score += ENEMIES[e.kind].score;
+    s.player.hp = Math.min(s.player.maxHp, s.player.hp + s.player.siphon);
+    if (s.kills % 3 === 0)
+      s.player.charges = Math.min(s.player.maxCharges, s.player.charges + 1);
+    s.message =
+      e.kind === "conductor"
+        ? "The keynote is silent. Reach the uplink."
+        : `${ENEMIES[e.kind].name} disconnected.`;
+    s.event = "kill";
   }
-  s.enemies=s.enemies.filter(e=>e.hp>0);
+  s.enemies = s.enemies.filter((e) => e.hp > 0);
 }
 function enemyTurn(s) {
-  for(const e of s.enemies) {
-    if(e.stun>0){e.stun--;e.intent=[];continue;}
-    if(e.intent.length) {
-      if(e.intent.some(p=>same(p,s.player))) {
-        s.player.hp=Math.max(0,s.player.hp-ENEMIES[e.kind].damage);
-        s.message=`${ENEMIES[e.kind].name} hit for ${ENEMIES[e.kind].damage}. Move off marked tiles.`;s.event='damage';
+  for (const e of s.enemies) {
+    if (e.stun > 0) {
+      e.stun--;
+      e.intent = [];
+      continue;
+    }
+    if (e.intent.length) {
+      if (e.intent.some((p) => same(p, s.player))) {
+        s.player.hp = Math.max(0, s.player.hp - ENEMIES[e.kind].damage);
+        s.message = `${ENEMIES[e.kind].name} hit for ${ENEMIES[e.kind].damage}. Move off marked tiles.`;
+        s.event = "damage";
       }
-      e.intent=[];continue;
+      e.intent = [];
+      continue;
     }
-    const dist=distance(e,s.player);
-    if(dist>6)continue;
-    if(dist===1) {e.intent=[{x:s.player.x,y:s.player.y}];continue;}
-    if(e.kind==='conductor'&&dist<=4) {
-      e.intent=[{x:s.player.x,y:s.player.y},...Object.values(vectors).map(([dx,dy])=>({x:s.player.x+dx,y:s.player.y+dy})).filter(p=>s.tiles[p.y]?.[p.x]===0)];
-      s.message='Conductor charging. Get clear of the cross.';continue;
+    const dist = distance(e, s.player);
+    if (dist > 6) continue;
+    if (dist === 1) {
+      e.intent = [{ x: s.player.x, y: s.player.y }];
+      continue;
     }
-    if(e.kind==='spitter'&&dist<=4&&(e.x===s.player.x||e.y===s.player.y)&&lineClear(s,e,s.player)) {e.intent=[{x:s.player.x,y:s.player.y}];continue;}
-    if(e.kind==='husk'&&s.turn%2===0)continue;
+    if (e.kind === "conductor" && dist <= 4) {
+      const horizontal = s.turn % 2 === 0;
+      e.intent = [-1, 0, 1]
+        .map((offset) => ({
+          x: s.player.x + (horizontal ? offset : 0),
+          y: s.player.y + (horizontal ? 0 : offset),
+        }))
+        .filter((p) => s.tiles[p.y]?.[p.x] === 0);
+      s.message = "Conductor charging. Leave the marked line.";
+      continue;
+    }
+    if (
+      e.kind === "spitter" &&
+      dist <= 4 &&
+      (e.x === s.player.x || e.y === s.player.y) &&
+      lineClear(s, e, s.player)
+    ) {
+      e.intent = [{ x: s.player.x, y: s.player.y }];
+      continue;
+    }
+    if (e.kind === "husk" && s.turn % 2 === 0) continue;
     // Shortest-path step respects walls and other actors; deterministic tie-breaking.
-    const queue=[{x:e.x,y:e.y,first:null}],seen=new Set([`${e.x},${e.y}`]);let next=null;
-    for(const p of queue) {
-      if(same(p,s.player)){next=p.first;break;}
-      for(const [dx,dy] of Object.values(vectors)) {
-        const n={x:p.x+dx,y:p.y+dy},key=`${n.x},${n.y}`;
-        if(s.tiles[n.y]?.[n.x]!==0||seen.has(key)||s.enemies.some(other=>other!==e&&same(other,n)))continue;
-        seen.add(key);queue.push({...n,first:p.first??n});
+    const queue = [{ x: e.x, y: e.y, first: null }],
+      seen = new Set([`${e.x},${e.y}`]);
+    let next = null;
+    for (const p of queue) {
+      if (same(p, s.player)) {
+        next = p.first;
+        break;
+      }
+      for (const [dx, dy] of Object.values(vectors)) {
+        const n = { x: p.x + dx, y: p.y + dy },
+          key = `${n.x},${n.y}`;
+        if (
+          s.tiles[n.y]?.[n.x] !== 0 ||
+          seen.has(key) ||
+          s.enemies.some((other) => other !== e && same(other, n))
+        )
+          continue;
+        seen.add(key);
+        queue.push({ ...n, first: p.first ?? n });
       }
     }
-    if(next&&!same(next,s.player)){e.x=next.x;e.y=next.y;}
+    if (next && !same(next, s.player)) {
+      e.x = next.x;
+      e.y = next.y;
+    }
   }
-  if(s.player.hp===0){s.phase='dead';s.message='Your signal is lost. The city remembers.';s.event='dead';}
-}
-export function act(s,action) {
-  if(s.phase!=='playing')return false;
-  s.event='move';
-  if(vectors[action]) {
-    const [dx,dy]=vectors[action],to={x:s.player.x+dx,y:s.player.y+dy};
-    if(s.tiles[to.y]?.[to.x]!==0){s.message='Blocked. No turn spent.';s.event='blocked';return false;}
-    const enemy=s.enemies.find(e=>same(e,to));
-    if(enemy){enemy.hp-=s.player.attack;s.message=`${ENEMIES[enemy.kind].name} −${s.player.attack} hull.`;s.event='hit';}
-    else {Object.assign(s.player,to);s.message='Sweep the streets. Reach the uplink.';}
-  } else if(action==='pulse') {
-    if(s.player.charges===0){s.message='No charge. Every third kill restores one.';s.event='blocked';return false;}
-    s.player.charges--;s.event='pulse';s.message='Pulse released. Nearby hostiles disrupted.';
-    for(const e of s.enemies)if(distance(e,s.player)<=s.player.pulseRange){e.hp-=s.player.pulseDamage;e.stun=2;e.intent=[];}
-  } else if(action==='wait'){s.message='Holding position.';s.event='wait';}
-  else return false;
-  s.turn++;removeDead(s);
-  const item=s.items.find(i=>same(i,s.player));
-  if(item) {
-    if(item.kind==='med'){s.player.hp=Math.min(s.player.maxHp,s.player.hp+5);s.message='Field kit: +5 hull.';}
-    if(item.kind==='cell'){s.player.charges=Math.min(s.player.maxCharges,s.player.charges+1);s.message='Power cell: +1 pulse.';}
-    if(item.kind==='signal'){s.score+=30;s.message='Clean signal recovered. +30 score.';}
-    s.items=s.items.filter(i=>i!==item);s.event='pickup';
+  if (s.player.hp === 0) {
+    s.phase = "dead";
+    s.message = "Your signal is lost. The city remembers.";
+    s.event = "dead";
   }
-  if(same(s.player,s.exit)&&!(s.floor===3&&s.enemies.some(e=>e.kind==='conductor'))) {
-    s.score+=100;
-    if(s.floor===DISTRICTS.length-1){s.phase='won';s.message='San Francisco is back on the air.';s.score+=s.player.hp*10;}
-    else {s.phase='upgrade';s.choices=shuffle(s,Object.keys(UPGRADES)).slice(0,3);s.message='Uplink secured. Choose your next modification.';}
-    reveal(s);return true;
+}
+export function act(s, action) {
+  if (s.phase !== "playing") return false;
+  s.event = "move";
+  if (vectors[action]) {
+    const [dx, dy] = vectors[action],
+      to = { x: s.player.x + dx, y: s.player.y + dy };
+    if (s.tiles[to.y]?.[to.x] !== 0) {
+      s.message = "Blocked. No turn spent.";
+      s.event = "blocked";
+      return false;
+    }
+    const enemy = s.enemies.find((e) => same(e, to));
+    if (enemy) {
+      enemy.hp -= s.player.attack;
+      s.message = `${ENEMIES[enemy.kind].name} −${s.player.attack} hull.`;
+      s.event = "hit";
+    } else {
+      Object.assign(s.player, to);
+      s.message = "Sweep the streets. Reach the uplink.";
+    }
+  } else if (action === "pulse") {
+    if (s.player.charges === 0) {
+      s.message = "No charge. Every third kill restores one.";
+      s.event = "blocked";
+      return false;
+    }
+    s.player.charges--;
+    s.event = "pulse";
+    s.message = "Pulse released. Nearby hostiles disrupted.";
+    for (const e of s.enemies)
+      if (distance(e, s.player) <= s.player.pulseRange) {
+        e.hp -= s.player.pulseDamage;
+        e.stun = 2;
+        e.intent = [];
+      }
+  } else if (action === "wait") {
+    s.message = "Holding position.";
+    s.event = "wait";
+  } else return false;
+  s.turn++;
+  removeDead(s);
+  const item = s.items.find((i) => same(i, s.player));
+  if (item) {
+    if (item.kind === "med") {
+      s.player.hp = Math.min(s.player.maxHp, s.player.hp + 5);
+      s.message = "Field kit: +5 hull.";
+    }
+    if (item.kind === "cell") {
+      s.player.charges = Math.min(s.player.maxCharges, s.player.charges + 1);
+      s.message = "Power cell: +1 pulse.";
+    }
+    if (item.kind === "signal") {
+      s.score += 30;
+      s.message = "Clean signal recovered. +30 score.";
+    }
+    s.items = s.items.filter((i) => i !== item);
+    s.event = "pickup";
   }
-  if(same(s.player,s.exit))s.message='Uplink jammed. Silence the Conductor first.';
-  enemyTurn(s);reveal(s);return true;
+  if (
+    same(s.player, s.exit) &&
+    !(s.floor === 3 && s.enemies.some((e) => e.kind === "conductor"))
+  ) {
+    s.score += 100;
+    if (s.floor === DISTRICTS.length - 1) {
+      s.phase = "won";
+      s.message = "San Francisco is back on the air.";
+      s.score += s.player.hp * 10;
+    } else {
+      s.phase = "upgrade";
+      s.choices = shuffle(s, Object.keys(UPGRADES)).slice(0, 3);
+      s.message = "Uplink secured. Choose your next modification.";
+    }
+    reveal(s);
+    return true;
+  }
+  if (same(s.player, s.exit))
+    s.message = "Uplink jammed. Silence the Conductor first.";
+  enemyTurn(s);
+  reveal(s);
+  return true;
 }
-export function chooseUpgrade(s,id) {
-  if(s.phase!=='upgrade'||!s.choices.includes(id))return false;
-  const p=s.player;
-  if(id==='blade')p.attack++;
-  if(id==='shell'){p.maxHp+=6;p.hp=Math.min(p.maxHp,p.hp+6);}
-  if(id==='siphon')p.siphon++;
-  if(id==='arc')p.pulseRange++;
-  if(id==='capacitor'){p.maxCharges++;p.charges=p.maxCharges;}
-  if(id==='power')p.pulseDamage+=2;
-  p.hp=Math.min(p.maxHp,p.hp+3);p.charges=Math.min(p.maxCharges,p.charges+1);
-  s.relics.push(id);s.floor++;s.choices=[];buildFloor(s);return true;
+export function chooseUpgrade(s, id) {
+  if (s.phase !== "upgrade" || !s.choices.includes(id)) return false;
+  const p = s.player;
+  if (id === "blade") p.attack++;
+  if (id === "shell") {
+    p.maxHp += 6;
+    p.hp = Math.min(p.maxHp, p.hp + 6);
+  }
+  if (id === "siphon") p.siphon++;
+  if (id === "arc") p.pulseRange++;
+  if (id === "capacitor") {
+    p.maxCharges++;
+    p.charges = p.maxCharges;
+  }
+  if (id === "power") p.pulseDamage += 2;
+  p.hp = Math.min(p.maxHp, p.hp + 3);
+  p.charges = Math.min(p.maxCharges, p.charges + 1);
+  s.relics.push(id);
+  s.floor++;
+  s.choices = [];
+  buildFloor(s);
+  return true;
 }
-export const encodeSave=s=>JSON.stringify({version:1,state:s});
+export const encodeSave = (s) => JSON.stringify({ version: 1, state: s });
 export function decodeSave(raw) {
   try {
-    const envelope=JSON.parse(raw),s=envelope.state;
-    if(envelope.version!==1||!s||s.version!==1)return null;
-    const integer=(v,min,max)=>Number.isInteger(v)&&v>=min&&v<=max;
-    const pos=p=>p&&integer(p.x,0,10)&&integer(p.y,0,10);
-    const grid=(g,predicate)=>Array.isArray(g)&&g.length===11&&g.every(row=>Array.isArray(row)&&row.length===11&&row.every(predicate));
-    if(!integer(s.seed,0,0xffffffff)||!integer(s.rng,0,0xffffffff)||!integer(s.floor,0,3)||!integer(s.turn,0,1000000)||!integer(s.kills,0,100000)||!integer(s.score,0,10000000))return null;
-    if(!['playing','upgrade','dead','won'].includes(s.phase)||!grid(s.tiles,v=>v===0||v===1)||!grid(s.seen,v=>typeof v==='boolean')||!grid(s.visible,v=>typeof v==='boolean'))return null;
-    const p=s.player;
-    if(!pos(p)||s.tiles[p.y][p.x]!==0||!pos(s.exit)||s.tiles[s.exit.y][s.exit.x]!==0)return null;
-    if(!integer(p.maxHp,1,100)||!integer(p.hp,0,p.maxHp)||!integer(p.attack,1,20)||!integer(p.maxCharges,1,10)||!integer(p.charges,0,p.maxCharges)||!integer(p.pulseDamage,1,20)||!integer(p.pulseRange,1,8)||!integer(p.siphon,0,4))return null;
-    if(!Array.isArray(s.enemies)||s.enemies.length>20||!s.enemies.every(e=>pos(e)&&Object.hasOwn(ENEMIES,e.kind)&&integer(e.hp,1,100)&&integer(e.maxHp,e.hp,100)&&integer(e.stun,0,2)&&Array.isArray(e.intent)&&e.intent.length<=5&&e.intent.every(pos)))return null;
-    if(!Array.isArray(s.items)||s.items.length>20||!s.items.every(i=>pos(i)&&['med','cell','signal'].includes(i.kind)))return null;
-    if(!Array.isArray(s.relics)||s.relics.length>3||!s.relics.every(r=>Object.hasOwn(UPGRADES,r))||!Array.isArray(s.choices)||!s.choices.every(r=>Object.hasOwn(UPGRADES,r)))return null;
-    if(s.phase==='upgrade'&&(s.choices.length!==3||s.floor===3))return null;
-    if((s.phase==='dead')!==(p.hp===0)||typeof s.message!=='string'||s.message.length>300||typeof s.event!=='string')return null;
+    const envelope = JSON.parse(raw),
+      s = envelope.state;
+    if (envelope.version !== 1 || !s || s.version !== 1) return null;
+    const integer = (v, min, max) =>
+      Number.isInteger(v) && v >= min && v <= max;
+    const pos = (p) => p && integer(p.x, 0, 10) && integer(p.y, 0, 10);
+    const grid = (g, predicate) =>
+      Array.isArray(g) &&
+      g.length === 11 &&
+      g.every(
+        (row) =>
+          Array.isArray(row) && row.length === 11 && row.every(predicate),
+      );
+    if (
+      !integer(s.seed, 0, 0xffffffff) ||
+      !integer(s.rng, 0, 0xffffffff) ||
+      !integer(s.floor, 0, 3) ||
+      !integer(s.turn, 0, 1000000) ||
+      !integer(s.kills, 0, 100000) ||
+      !integer(s.score, 0, 10000000)
+    )
+      return null;
+    if (
+      !["playing", "upgrade", "dead", "won"].includes(s.phase) ||
+      !grid(s.tiles, (v) => v === 0 || v === 1) ||
+      !grid(s.seen, (v) => typeof v === "boolean") ||
+      !grid(s.visible, (v) => typeof v === "boolean")
+    )
+      return null;
+    const p = s.player;
+    if (
+      !pos(p) ||
+      s.tiles[p.y][p.x] !== 0 ||
+      !pos(s.exit) ||
+      s.tiles[s.exit.y][s.exit.x] !== 0
+    )
+      return null;
+    if (
+      !integer(p.maxHp, 1, 100) ||
+      !integer(p.hp, 0, p.maxHp) ||
+      !integer(p.attack, 1, 20) ||
+      !integer(p.maxCharges, 1, 10) ||
+      !integer(p.charges, 0, p.maxCharges) ||
+      !integer(p.pulseDamage, 1, 20) ||
+      !integer(p.pulseRange, 1, 8) ||
+      !integer(p.siphon, 0, 4)
+    )
+      return null;
+    if (
+      !Array.isArray(s.enemies) ||
+      s.enemies.length > 20 ||
+      !s.enemies.every(
+        (e) =>
+          pos(e) &&
+          Object.hasOwn(ENEMIES, e.kind) &&
+          integer(e.hp, 1, 100) &&
+          integer(e.maxHp, e.hp, 100) &&
+          integer(e.stun, 0, 2) &&
+          Array.isArray(e.intent) &&
+          e.intent.length <= 5 &&
+          e.intent.every(pos),
+      )
+    )
+      return null;
+    if (
+      !Array.isArray(s.items) ||
+      s.items.length > 20 ||
+      !s.items.every(
+        (i) => pos(i) && ["med", "cell", "signal"].includes(i.kind),
+      )
+    )
+      return null;
+    if (
+      !Array.isArray(s.relics) ||
+      s.relics.length > 3 ||
+      !s.relics.every((r) => Object.hasOwn(UPGRADES, r)) ||
+      !Array.isArray(s.choices) ||
+      !s.choices.every((r) => Object.hasOwn(UPGRADES, r))
+    )
+      return null;
+    if (s.phase === "upgrade" && (s.choices.length !== 3 || s.floor === 3))
+      return null;
+    if (
+      (s.phase === "dead") !== (p.hp === 0) ||
+      typeof s.message !== "string" ||
+      s.message.length > 300 ||
+      typeof s.event !== "string"
+    )
+      return null;
     return s;
-  } catch {return null;}
+  } catch {
+    return null;
+  }
 }
