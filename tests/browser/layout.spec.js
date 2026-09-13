@@ -17,6 +17,7 @@ test("an active run can be deliberately abandoned with a safe default", async ({
 }) => {
   await page.goto("./");
   await press(page, "Enter");
+  await press(page, "Enter");
   await press(page, "Escape");
   await press(page, "ArrowDown");
   await press(page, "Enter");
@@ -28,6 +29,8 @@ test("an active run can be deliberately abandoned with a safe default", async ({
     page.getByRole("button", { name: "Keep this run" }),
   ).toBeFocused();
   await press(page, "ArrowDown");
+  await press(page, "Enter");
+  await expect(page.locator('[data-screen="loadout"]')).toBeVisible();
   await press(page, "Enter");
   await expect(page.locator("[data-turn]")).toHaveText("0");
 });
@@ -61,7 +64,7 @@ test("small and wide viewports keep the complete composition centered", async ({
   }
 });
 test("upgrade footer text never overlaps the controls", async ({ page }) => {
-  const run = newRun(1);
+  const run = newRun(fixture.seed);
   for (const action of fixture.actions.slice(
     0,
     fixture.actions.findIndex((a) => a.startsWith("upgrade:")),
