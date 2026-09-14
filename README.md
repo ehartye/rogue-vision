@@ -56,6 +56,8 @@ The game waits indefinitely for input. Saves occur at completed turns and upgrad
 
 Field kit → Sound enables distinct synthesized action cues. Damage and imminent strikes take priority; combined combat outcomes retain their meaning, landmark trades have acceptance/refusal feedback, and the signal motif marks district uplinks and resolves at victory. Muting or hiding the app cancels pending sounds. Audio uses no downloaded assets. Browser renders check output and release envelopes; audibility on the glasses still needs a device listening check.
 
+The lost-signal score develops that motif across four district arrangements at a fixed 72 BPM. Authored replies vary by run, with quiet space at phrase endings. Visible danger and hull pressure add texture; waiting to think never increases the tempo or advances the game. Music stops in menus, on mute and while hidden, and restarts without replaying missed notes. Action cues briefly lower the accompaniment.
+
 ## Develop and verify
 
 Requires Node.js 24+.
@@ -66,8 +68,11 @@ npm test
 npm run build
 npx playwright install chromium
 npm run test:browser
+npm run audio:render
 npm run dev
 ```
+
+`audio:render` writes four native-browser WAV auditions, mix measurements and a playable `index.html` to `.artifacts/audio/`. Each sample moves from quiet exploration to pressure and ends with the victory resolution. Open that local HTML file to listen. These generated previews stay outside the production/offline bundle.
 
 Preview at `http://127.0.0.1:4173/rogue-vision/`. Rebuild after editing. Arrow keys, Enter and Escape reproduce the discrete control vocabulary. The preview deliberately uses the same subpath as GitHub Pages.
 

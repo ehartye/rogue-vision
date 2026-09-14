@@ -217,6 +217,9 @@ test("the real final-uplink action plays the resolving cadence", async ({
   }, encodeSave(run));
   await page.goto("./");
   await page.getByRole("button", { name: "Resume expedition" }).click();
+  await page.evaluate(() => {
+    window.scheduledNotes = [];
+  });
   await page.keyboard.press("ArrowRight");
   await expect(page.locator('[data-screen="won"]')).toBeVisible();
   await expect
