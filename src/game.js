@@ -467,7 +467,8 @@ export function act(s, action) {
   if (same(s.player, s.exit))
     s.message = "Uplink jammed. Silence the Conductor first.";
   enemyTurn(s);
-  if (s.phase === "playing" && !wasThreatened && threatened(s)) emit(s, "warning");
+  if (s.phase === "playing" && !wasThreatened && threatened(s))
+    emit(s, "warning");
   if (
     s.phase === "playing" &&
     s.landmark &&
