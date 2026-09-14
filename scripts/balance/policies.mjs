@@ -1,6 +1,6 @@
 import { LANDMARKS } from "../../src/game.js";
 
-export const POLICY_VERSION = 1;
+export const POLICY_VERSION = 2;
 export const POLICIES = ["direct", "scavenger", "tactical"];
 const moves = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
 const key = (p) => `${p.x},${p.y}`;
@@ -34,6 +34,7 @@ export function observe(s) {
     ),
     items: s.items.filter((i) => s.visible[i.y][i.x]),
     exit: { x: 9, y: 9 }, // Stated in the accessible map description.
+    relay: s.relay ?? null, // Public objective beacon, like the uplink.
     landmark:
       s.landmark && s.seen[s.landmark.y][s.landmark.x] ? s.landmark : null,
   });
@@ -138,6 +139,10 @@ export function decide(o, memory, policy) {
   for (const item of o.items) memory.items[key(item)] = item;
   const paths = routes(o),
     objectives = [];
+  const relay = o.relay?.progress < 3 ? o.relay : null;
+  const destination = relay ?? o.exit;
+  if (relay && paths.has(key(relay)))
+    objectives.push({ ...paths.get(key(relay)), value: 35 });
   for (const p of paths.values()) {
     if (
       p.steps &&
@@ -150,7 +155,7 @@ export function decide(o, memory, policy) {
         value:
           14 -
           p.steps -
-          distance(p, o.exit) * 0.25 -
+          distance(p, destination) * 0.25 -
           (memory.visits[key(p)] ?? 0) * 4,
       });
     }
@@ -158,7 +163,7 @@ export function decide(o, memory, policy) {
   const boss = o.enemies.find((e) => e.kind === "conductor");
   if (boss && paths.has(key(boss)))
     objectives.push({ ...paths.get(key(boss)), value: 30 });
-  if (o.floor < 3 || memory.bossDefeated || !objectives.length) {
+  if (!relay && (o.floor < 3 || memory.bossDefeated || !objectives.length)) {
     const exit = paths.get(key(o.exit));
     if (exit?.steps) objectives.push({ ...exit, value: 20 - exit.steps * 0.3 });
   }
@@ -198,7 +203,8 @@ export function decide(o, memory, policy) {
   candidates.push("wait");
   if (
     o.player.charges > 0 &&
-    o.enemies.some((e) => distance(e, o.player) <= o.player.pulseRange)
+    (o.enemies.some((e) => distance(e, o.player) <= o.player.pulseRange) ||
+      (relay && distance(relay, o.player) <= o.player.pulseRange))
   )
     candidates.push("pulse");
   // A separate, replayable RNG breaks ties; it never advances world generation.
@@ -238,6 +244,15 @@ export function decide(o, memory, policy) {
     if (action === target?.first) value += 8;
     value -= (memory.visits[key(position)] ?? 0) * 0.5;
     if (action === "wait") value -= 5;
+    if (relay && key(position) === key(relay)) value += 14;
+    if (
+      relay &&
+      action === "pulse" &&
+      distance(relay, o.player) <= o.player.pulseRange
+    )
+      // Value only the work remaining. A flat completion bonus made bots burn
+      // a charge even when one safe manual turn would finish the relay.
+      value += (policy === "direct" ? 6 : 3) * (3 - relay.progress);
     if (danger) value -= policy === "direct" ? 12 : 60;
     if (enemy)
       value += (killed.length ? 10 : 3) + (enemy.kind === "conductor" ? 5 : 0);

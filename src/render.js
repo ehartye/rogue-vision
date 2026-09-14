@@ -311,6 +311,26 @@ export function drawMap(canvas, s) {
       C.ice,
       3,
     );
+    if (s.relay?.progress < 3) {
+      c.fillStyle = C.gold;
+      c.fillRect(x + 14, y + 11, 8, 3);
+    }
+  }
+  if (s.relay) {
+    const x = s.relay.x * 36,
+      y = s.relay.y * 36,
+      online = s.relay.progress === 3;
+    // Public objective beacon, drawn without revealing surrounding terrain.
+    c.strokeStyle = online ? C.green : C.gold;
+    c.lineWidth = 2;
+    c.strokeRect(x + 9, y + 10, 18, 16);
+    c.fillStyle = online ? C.green : C.gold;
+    c.fillRect(x + 16, y + 5, 4, 4);
+    c.fillRect(x + 16, y + 27, 4, 3);
+    for (let i = 0; i < 3; i++) {
+      c.fillStyle = i < s.relay.progress ? C.green : C.dim;
+      c.fillRect(x + 12 + i * 5, y + 15, 3, 7);
+    }
   }
   for (const item of s.items)
     if (s.visible[item.y][item.x]) {
@@ -509,5 +529,8 @@ export function drawMap(canvas, s) {
 }
 export function mapDescription(s) {
   const nearby = s.enemies.filter((e) => s.visible[e.y][e.x]);
-  return `${DISTRICTS[s.floor].name}. You are at column ${s.player.x}, row ${s.player.y}. ${nearby.length} visible hostiles. Uplink at column 9, row 9. ${s.message}`;
+  const relay = s.relay
+    ? ` Lantern relay at column ${s.relay.x}, row ${s.relay.y}: ${s.relay.progress}/3. Stand there for three turns or pulse within range to power the uplink.`
+    : "";
+  return `${DISTRICTS[s.floor].name}. You are at column ${s.player.x}, row ${s.player.y}. ${nearby.length} visible hostiles. Uplink at column 9, row 9.${relay} ${s.message}`;
 }

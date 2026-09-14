@@ -61,6 +61,7 @@ function district(s, partial = false) {
 export function simulate({
   seed = 1,
   kit = "courier",
+  rules = 2,
   policy = "tactical",
   maxTurns = 400,
   state,
@@ -72,7 +73,7 @@ export function simulate({
   if (!POLICIES.includes(policy)) throw Error(`Unknown policy: ${policy}`);
   if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > 100000)
     throw Error("Invalid maxTurns");
-  const s = state ? structuredClone(state) : newRun(seed, kit);
+  const s = state ? structuredClone(state) : newRun(seed, kit, rules);
   const m = memory
     ? structuredClone(memory)
     : newMemory((s.seed ^ 0x9e3779b9) >>> 0);

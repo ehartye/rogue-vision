@@ -79,6 +79,7 @@ test("landmark reinforcements use the same runner durability as district enemies
 
 test("a reckless seeded expedition can die before Moscone", () => {
   const result = simulate({
+    rules: 1,
     seed: 11,
     kit: "courier",
     policy: "direct",

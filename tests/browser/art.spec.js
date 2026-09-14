@@ -6,7 +6,7 @@ const press = async (page, key) => {
   await page.waitForTimeout(85);
 };
 async function enter(page, configure = () => {}) {
-  const run = newRun(2);
+  const run = newRun(2, "courier", 1);
   run.floor = 1;
   run.enemies[0].intent = [{ x: 1, y: 1 }];
   configure(run);

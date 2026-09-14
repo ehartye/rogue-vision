@@ -10,7 +10,7 @@ test("complete a seeded expedition through every district and boss using only wr
 }) => {
   await page.addInitScript(
     (save) => localStorage.setItem("fogfall.run.v1", save),
-    encodeSave(newRun(fixture.seed)),
+    encodeSave(newRun(fixture.seed, "courier", fixture.rules)),
   );
   await page.goto("./");
   await page.evaluate(() => document.fonts.ready);
