@@ -258,6 +258,26 @@ export function reveal(s) {
 // Per-action outcomes are transient: visual feedback retains its single event,
 // while consumers can observe simultaneous results without changing saved runs.
 const outcomes = new WeakMap();
+const metrics = new WeakMap();
+const emptyMetrics = () => ({
+  damageTaken: 0,
+  healing: 0,
+  healingWasted: 0,
+  hullSpent: 0,
+  pickups: [],
+});
+// Transient measurements share the action boundary; they never enter a save.
+export function actionMetrics(s) {
+  const m = metrics.get(s) ?? emptyMetrics();
+  return { ...m, pickups: [...m.pickups] };
+}
+function repair(s, amount) {
+  const restored = Math.min(s.player.maxHp - s.player.hp, amount);
+  s.player.hp += restored;
+  const m = metrics.get(s);
+  m.healing += restored;
+  m.healingWasted += amount - restored;
+}
 export function actionEvents(s) {
   return [...(outcomes.get(s) ?? [])];
 }
@@ -273,7 +293,7 @@ function removeDead(s) {
   for (const e of dead) {
     s.kills++;
     s.score += ENEMIES[e.kind].score;
-    s.player.hp = Math.min(s.player.maxHp, s.player.hp + s.player.siphon);
+    repair(s, s.player.siphon);
     if (s.kills % 3 === 0)
       s.player.charges = Math.min(s.player.maxCharges, s.player.charges + 1);
     s.message =
@@ -295,6 +315,10 @@ function enemyTurn(s) {
     }
     if (e.intent.length) {
       if (e.intent.some((p) => same(p, s.player))) {
+        metrics.get(s).damageTaken += Math.min(
+          s.player.hp,
+          ENEMIES[e.kind].damage,
+        );
         s.player.hp = Math.max(0, s.player.hp - ENEMIES[e.kind].damage);
         s.message = `${ENEMIES[e.kind].name} hit for ${ENEMIES[e.kind].damage}. Move off marked tiles.`;
         s.event = "damage";
@@ -366,6 +390,7 @@ function enemyTurn(s) {
 }
 export function act(s, action) {
   outcomes.set(s, new Set());
+  metrics.set(s, emptyMetrics());
   if (s.phase !== "playing") return false;
   const wasThreatened = threatened(s);
   let melee = false;
@@ -425,12 +450,11 @@ export function act(s, action) {
   const killed = removeDead(s);
   if (s.kit === "relay" && action === "pulse" && killed >= 2)
     s.player.charges = Math.min(s.player.maxCharges, s.player.charges + 1);
-  if (s.kit === "breaker" && melee && killed)
-    s.player.hp = Math.min(s.player.maxHp, s.player.hp + killed);
+  if (s.kit === "breaker" && melee && killed) repair(s, killed);
   const item = s.items.find((i) => same(i, s.player));
   if (item) {
     if (item.kind === "med") {
-      s.player.hp = Math.min(s.player.maxHp, s.player.hp + 5);
+      repair(s, 5);
       s.message = "Field kit: +5 hull.";
     }
     if (item.kind === "cell") {
@@ -442,6 +466,7 @@ export function act(s, action) {
       s.message = "Clean signal recovered. +30 score.";
     }
     s.items = s.items.filter((i) => i !== item);
+    metrics.get(s).pickups.push(item.kind);
     s.event = "pickup";
     emit(s, "pickup");
   }
@@ -484,6 +509,7 @@ export function act(s, action) {
 }
 export function chooseEncounter(s, choice) {
   outcomes.set(s, new Set());
+  metrics.set(s, emptyMetrics());
   if (
     s.phase !== "encounter" ||
     !s.landmark ||
@@ -503,7 +529,9 @@ export function chooseEncounter(s, choice) {
       p.maxCharges,
       p.charges - (offer.charges ?? 0) + (offer.cells ?? 0),
     );
-    p.hp = Math.min(p.maxHp, p.hp - (offer.hull ?? 0) + (offer.heal ?? 0));
+    p.hp -= offer.hull ?? 0;
+    metrics.get(s).hullSpent += offer.hull ?? 0;
+    repair(s, offer.heal ?? 0);
     p.attack += offer.attack ?? 0;
     s.score += offer.score;
     if (offer.runners) {
@@ -547,12 +575,13 @@ export function chooseEncounter(s, choice) {
 }
 export function chooseUpgrade(s, id) {
   outcomes.set(s, new Set());
+  metrics.set(s, emptyMetrics());
   if (s.phase !== "upgrade" || !s.choices.includes(id)) return false;
   const p = s.player;
   if (id === "blade") p.attack++;
   if (id === "shell") {
     p.maxHp += 6;
-    p.hp = Math.min(p.maxHp, p.hp + 6);
+    repair(s, 6);
   }
   if (id === "siphon") p.siphon++;
   if (id === "arc") p.pulseRange++;
@@ -561,7 +590,7 @@ export function chooseUpgrade(s, id) {
     p.charges = p.maxCharges;
   }
   if (id === "power") p.pulseDamage += 2;
-  p.hp = Math.min(p.maxHp, p.hp + 3);
+  repair(s, 3);
   p.charges = Math.min(p.maxCharges, p.charges + 1);
   s.relics.push(id);
   s.floor++;

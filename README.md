@@ -69,10 +69,13 @@ npm run build
 npx playwright install chromium
 npm run test:browser
 npm run audio:render
+npm run balance
 npm run dev
 ```
 
 `audio:render` writes four native-browser WAV auditions, mix measurements and a playable `index.html` to `.artifacts/audio/`. Each sample moves from quiet exploration to pressure and ends with the victory resolution. Open that local HTML file to listen. These generated previews stay outside the production/offline bundle.
+
+`balance` runs reproducible automated expeditions across all starting kits and three strategies, then writes district pressure, resource use and unlock-pacing reports to `.artifacts/balance/`. Add `-- --runs 100 --forks --sessions 20` for a larger matched-seed experiment with alternative upgrade continuations. Reports distinguish deaths from unfinished bot runs and preserve exact action replays. See [balance harness usage and interpretation](scripts/balance/README.md); bot outcomes do not establish human difficulty.
 
 Preview at `http://127.0.0.1:4173/rogue-vision/`. Rebuild after editing. Arrow keys, Enter and Escape reproduce the discrete control vocabulary. The preview deliberately uses the same subpath as GitHub Pages.
 
