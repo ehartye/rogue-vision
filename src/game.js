@@ -255,6 +255,19 @@ export function reveal(s) {
       if (distance(s.player, { x, y }) <= 5 && lineClear(s, s.player, { x, y }))
         s.visible[y][x] = s.seen[y][x] = true;
 }
+// Per-action outcomes are transient: visual feedback retains its single event,
+// while consumers can observe simultaneous results without changing saved runs.
+const outcomes = new WeakMap();
+export function actionEvents(s) {
+  return [...(outcomes.get(s) ?? [])];
+}
+function emit(s, event) {
+  if (!outcomes.has(s)) outcomes.set(s, new Set());
+  outcomes.get(s).add(event);
+}
+function threatened(s) {
+  return s.enemies.some((e) => e.intent.some((p) => same(p, s.player)));
+}
 function removeDead(s) {
   const dead = s.enemies.filter((e) => e.hp <= 0);
   for (const e of dead) {
@@ -268,6 +281,7 @@ function removeDead(s) {
         ? "The keynote is silent. Reach the uplink."
         : `${ENEMIES[e.kind].name} disconnected.`;
     s.event = "kill";
+    emit(s, "kill");
   }
   s.enemies = s.enemies.filter((e) => e.hp > 0);
   return dead.length;
@@ -284,6 +298,7 @@ function enemyTurn(s) {
         s.player.hp = Math.max(0, s.player.hp - ENEMIES[e.kind].damage);
         s.message = `${ENEMIES[e.kind].name} hit for ${ENEMIES[e.kind].damage}. Move off marked tiles.`;
         s.event = "damage";
+        emit(s, "damage");
       }
       e.intent = [];
       continue;
@@ -346,10 +361,13 @@ function enemyTurn(s) {
     s.phase = "dead";
     s.message = "Your signal is lost. The city remembers.";
     s.event = "dead";
+    emit(s, "dead");
   }
 }
 export function act(s, action) {
+  outcomes.set(s, new Set());
   if (s.phase !== "playing") return false;
+  const wasThreatened = threatened(s);
   let melee = false;
   s.event = "move";
   if (vectors[action]) {
@@ -358,6 +376,7 @@ export function act(s, action) {
     if (s.tiles[to.y]?.[to.x] !== 0) {
       s.message = "Blocked. No turn spent.";
       s.event = "blocked";
+      emit(s, "blocked");
       return false;
     }
     const enemy = s.enemies.find((e) => same(e, to));
@@ -385,6 +404,7 @@ export function act(s, action) {
     if (s.player.charges === 0) {
       s.message = "No charge. Every third kill restores one.";
       s.event = "blocked";
+      emit(s, "blocked");
       return false;
     }
     s.player.charges--;
@@ -400,6 +420,7 @@ export function act(s, action) {
     s.message = "Holding position.";
     s.event = "wait";
   } else return false;
+  emit(s, s.event);
   s.turn++;
   const killed = removeDead(s);
   if (s.kit === "relay" && action === "pulse" && killed >= 2)
@@ -422,6 +443,7 @@ export function act(s, action) {
     }
     s.items = s.items.filter((i) => i !== item);
     s.event = "pickup";
+    emit(s, "pickup");
   }
   if (
     same(s.player, s.exit) &&
@@ -430,10 +452,12 @@ export function act(s, action) {
     s.score += 100;
     if (s.floor === DISTRICTS.length - 1) {
       s.phase = "won";
+      emit(s, "won");
       s.message = "San Francisco is back on the air.";
       s.score += s.player.hp * 10;
     } else {
       s.phase = "upgrade";
+      emit(s, "uplink");
       s.choices = shuffle(s, Object.keys(UPGRADES)).slice(0, 3);
       s.message = "Uplink secured. Choose your next modification.";
     }
@@ -443,6 +467,7 @@ export function act(s, action) {
   if (same(s.player, s.exit))
     s.message = "Uplink jammed. Silence the Conductor first.";
   enemyTurn(s);
+  if (s.phase === "playing" && !wasThreatened && threatened(s)) emit(s, "warning");
   if (
     s.phase === "playing" &&
     s.landmark &&
@@ -450,12 +475,14 @@ export function act(s, action) {
     same(s.player, s.landmark)
   ) {
     s.phase = "encounter";
+    emit(s, "landmark");
     s.message = LANDMARKS[s.floor].text;
   }
   reveal(s);
   return true;
 }
 export function chooseEncounter(s, choice) {
+  outcomes.set(s, new Set());
   if (
     s.phase !== "encounter" ||
     !s.landmark ||
@@ -468,6 +495,7 @@ export function chooseEncounter(s, choice) {
   if (choice === "take") {
     if (p.charges < (offer.charges ?? 0) || p.hp <= (offer.hull ?? 0)) {
       s.message = "Not enough resources. You can pass by safely.";
+      emit(s, "blocked");
       return false;
     }
     p.charges = Math.min(
@@ -512,10 +540,12 @@ export function chooseEncounter(s, choice) {
   s.landmark.outcome = choice;
   s.phase = "playing";
   s.event = "pickup";
+  emit(s, choice === "take" ? "trade" : "leave");
   reveal(s);
   return true;
 }
 export function chooseUpgrade(s, id) {
+  outcomes.set(s, new Set());
   if (s.phase !== "upgrade" || !s.choices.includes(id)) return false;
   const p = s.player;
   if (id === "blade") p.attack++;
@@ -536,6 +566,7 @@ export function chooseUpgrade(s, id) {
   s.floor++;
   s.choices = [];
   buildFloor(s);
+  emit(s, "arrival");
   return true;
 }
 export const encodeSave = (s) => JSON.stringify({ version: 1, state: s });
