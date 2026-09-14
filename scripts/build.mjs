@@ -9,6 +9,9 @@ if (dirname(output) !== process.cwd() || !output.endsWith("dist"))
 // Only this verified, project-local generated directory is replaced.
 await rm(output, { recursive: true, force: true });
 await mkdir("dist/assets", { recursive: true });
+await mkdir("dist/assets/art", { recursive: true });
+for (const file of ["people.png", "chinatown-frontage.png"])
+  await cp(`assets/art/${file}`, `dist/assets/art/${file}`);
 for (const file of ["style.css", "manifest.webmanifest"])
   await cp(file, `dist/${file}`);
 await writeFile(
@@ -97,6 +100,8 @@ const files = [
   "assets/display.woff2",
   "assets/reading.woff2",
   "assets/icon.png",
+  "assets/art/people.png",
+  "assets/art/chinatown-frontage.png",
 ];
 const hash = createHash("sha256");
 let bytes = 0;

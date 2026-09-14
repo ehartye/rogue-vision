@@ -23,9 +23,14 @@ import {
 } from "./game.js";
 import { createInputFilter, decodeKey } from "./input.js";
 import { drawMap, drawSkyline, mapDescription } from "./render.js";
+import { loadArt } from "./art.js";
 import { createAudio } from "./audio.js";
 import { musicState } from "./score.js";
 const audio = createAudio();
+loadArt(() => {
+  const map = document.querySelector(".map");
+  if (map && run) renderMs = drawMap(map, run);
+});
 const app = document.querySelector("#app"),
   SAVE = "fogfall.run.v1",
   STATS = "fogfall.stats.v1",
