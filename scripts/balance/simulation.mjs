@@ -30,7 +30,7 @@ const dispatch = (s, action) =>
       ? chooseEncounter(s, action.slice(10))
       : act(s, action);
 
-function district(s) {
+function district(s, partial = false) {
   return {
     district: s.floor + 1,
     entryTurn: s.turn,
@@ -51,7 +51,7 @@ function district(s) {
     pickups: { med: 0, cell: 0, signal: 0 },
     encounters: [],
     cleared: ["upgrade", "won"].includes(s.phase),
-    partial: s.turn > 0,
+    partial,
     exitHp: s.player.hp,
     exitMaxHp: s.player.maxHp,
     exitCharges: s.player.charges,
@@ -80,7 +80,7 @@ export function simulate({
     initialHp = s.player.hp;
   const initialMemory = structuredClone(m);
   const actions = [],
-    districts = [district(s)],
+    districts = [district(s, s.turn > 0)],
     upgradeComparisons = [],
     transitionHealing = [];
   const total = Object.fromEntries(measurementKeys.map((k) => [k, 0]));

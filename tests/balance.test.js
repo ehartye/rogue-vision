@@ -245,6 +245,7 @@ test("the selected upgrade continuation matches the original policy's final stat
     forks: true,
   });
   assert.ok(row.upgradeComparisons.length > 0);
+  assert.ok(row.districts.every((d) => d.partial === false));
   for (const checkpoint of row.upgradeComparisons) {
     const baseline = checkpoint.alternatives.find(
       (a) => a.choice === checkpoint.selected,
