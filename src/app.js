@@ -27,7 +27,7 @@ import { loadArt } from "./art.js";
 import { createAudio } from "./audio.js";
 import { musicState } from "./score.js";
 const audio = createAudio();
-loadArt().then(() => {
+loadArt(() => {
   const map = document.querySelector(".map");
   if (map && run) renderMs = drawMap(map, run);
 });

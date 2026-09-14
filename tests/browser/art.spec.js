@@ -5,10 +5,11 @@ const press = async (page, key) => {
   await page.keyboard.press(key);
   await page.waitForTimeout(85);
 };
-async function enter(page) {
+async function enter(page, configure = () => {}) {
   const run = newRun(2);
   run.floor = 1;
   run.enemies[0].intent = [{ x: 1, y: 1 }];
+  configure(run);
   const save = encodeSave(run);
   await page.addInitScript((save) => {
     if (!localStorage.getItem("fogfall.run.v1"))
@@ -102,4 +103,60 @@ test("failed art requests keep the fallback map playable", async ({ page }) => {
   await press(page, "ArrowRight");
   await expect(page.locator("[data-turn]")).toHaveText("1");
   expect(errors).toEqual([]);
+});
+
+test("injured and stunned hostiles retain their status marks on a threatened tile", async ({
+  page,
+}) => {
+  await enter(page, (run) => {
+    Object.assign(run.enemies[0], { x: 2, y: 1, hp: 1, stun: 1, intent: [] });
+    run.enemies[1].intent = [{ x: 2, y: 1 }];
+  });
+  await expect(page.locator(".map")).toHaveAttribute("data-art", "ready");
+  const marks = await page.locator(".map").evaluate((c) => {
+    const ctx = c.getContext("2d");
+    return {
+      health: Array.from(ctx.getImageData(98, 69, 1, 1).data),
+      stun: Array.from(ctx.getImageData(90, 39, 1, 1).data),
+    };
+  });
+  expect(marks.health).toEqual([68, 35, 38, 255]);
+  expect(marks.stun).toEqual([128, 232, 255, 255]);
+});
+
+test("people repaint while scenery is still loading, without waiting for input", async ({
+  page,
+}) => {
+  let release, releasePeople;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const peopleGate = new Promise((resolve) => {
+    releasePeople = resolve;
+  });
+  await page.route("**/assets/art/people.png", async (route) => {
+    await peopleGate;
+    await route.continue();
+  });
+  await page.route("**/assets/art/chinatown-frontage.png", async (route) => {
+    await gate;
+    await route.continue();
+  });
+  try {
+    await enter(page);
+    releasePeople();
+    await expect
+      .poll(() =>
+        page
+          .locator(".map")
+          .evaluate((c) =>
+            Array.from(c.getContext("2d").getImageData(52, 40, 1, 1).data),
+          ),
+      )
+      .toEqual([128, 232, 255, 255]);
+    await expect(page.locator("[data-turn]")).toHaveText("0");
+  } finally {
+    releasePeople();
+    release();
+  }
 });

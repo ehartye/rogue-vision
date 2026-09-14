@@ -435,16 +435,6 @@ export function drawMap(canvas, s) {
         c.fillRect(x - 6, y - 5, 4, 4);
         c.fillRect(x + 2, y - 5, 4, 4);
       }
-      if (e.hp < e.maxHp) {
-        c.fillStyle = "#442326";
-        c.fillRect(x - 12, y + 14, 24, 3);
-        c.fillStyle = C.red;
-        c.fillRect(x - 12, y + 14, (24 * e.hp) / e.maxHp, 3);
-      }
-      if (e.stun) {
-        c.fillStyle = C.ice;
-        c.fillRect(x - 3, y - 16, 6, 3);
-      }
     }
   const x = s.player.x * 36 + 18,
     y = s.player.y * 36 + 18;
@@ -497,6 +487,23 @@ export function drawMap(canvas, s) {
       ],
       C.red,
     );
+  }
+  // Status is tactical information too: a crossing attack must not make an
+  // injured enemy look fully healed or hide that it is disrupted.
+  for (const e of s.enemies) {
+    if (!s.visible[e.y][e.x]) continue;
+    const x = e.x * 36 + 18,
+      y = e.y * 36 + 18;
+    if (e.hp < e.maxHp) {
+      c.fillStyle = "#442326";
+      c.fillRect(x - 12, y + 14, 24, 3);
+      c.fillStyle = C.red;
+      c.fillRect(x - 12, y + 14, (24 * e.hp) / e.maxHp, 3);
+    }
+    if (e.stun) {
+      c.fillStyle = C.ice;
+      c.fillRect(x - 3, y - 16, 6, 3);
+    }
   }
   return performance.now() - start;
 }

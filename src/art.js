@@ -8,7 +8,7 @@ let loading;
 
 // Optional artwork never gates input or saving. A failed asset keeps its vector
 // fallback; the next page load retries. No authoring tools run in the game.
-export function loadArt() {
+export function loadArt(onImageReady) {
   return (loading ??= Promise.all(
     ["people", "chinatown-frontage"].map(
       (name) =>
@@ -17,6 +17,7 @@ export function loadArt() {
           image.onload = () => {
             images[name] = image;
             resolve();
+            onImageReady?.();
           };
           image.onerror = () => resolve();
           image.src = new URL(`assets/art/${name}.png`, document.baseURI).href;
