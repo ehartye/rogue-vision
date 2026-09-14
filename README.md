@@ -47,6 +47,7 @@ Scan the [add-to-glasses QR code](assets/add-to-glasses.png) with your phone to 
 - **Pulse:** damages and disrupts nearby hostiles. Every third kill restores one charge.
 - **Coral warning tiles:** a strike lands there next turn. Move away first.
 - **Cyan uplink:** the lower-right exit. Install an upgrade between districts. Defeat the Conductor before the final extraction.
+- **Lantern relay:** in new expeditions, Chinatown's uplink needs power. Stand at the gold lantern for three turns, or pulse within range to finish immediately. Arrival counts toward the three turns; progress survives moving away and reloading. Pinch → Tune relay holds position using the existing Wait action. Enemies keep acting while you work. Older saved expeditions retain their original objectives.
 - **Gold landmark:** a ring, or Dragon Gate in Chinatown, marks an optional deal. Inspect the cost, then accept or pass safely. Each district has its own street pattern; supplies reward exploration away from the exit route.
 - **More:** opens a modal for Your build and Sound. Inspect your starting kit and installed modifications without spending a turn. Aftershock strengthens melee attacks on disrupted enemies; Kinetic recovery recharges pulses through melee strikes. Upgrade effects stack. Back from either modal returns to the action panel.
 

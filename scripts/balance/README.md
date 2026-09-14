@@ -1,5 +1,7 @@
 # Balance experiments
 
+Policy version 2 understands the public Chinatown lantern-relay beacon and evaluates manual work versus a pulse using the work remaining. New simulations use expedition rules 2. For a matched pre-objective baseline, call `simulate({ rules: 1, ...options })`; both variants use the same policy version. Old serialized expeditions retain their rules, including future districts. The original seed-2 browser/measurement fixture is explicitly rules 1 so it continues to verify legacy behavior.
+
 Run from the repository root with Node.js 24+. No browser or additional dependencies are needed.
 
 ```text

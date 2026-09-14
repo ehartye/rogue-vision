@@ -65,7 +65,7 @@ test("landmark hull costs and upgrade healing have separate accounting", () => {
 });
 
 test("measurement preserves the existing real expedition exactly", () => {
-  const s = game.newRun(fixture.seed);
+  const s = game.newRun(fixture.seed, "courier", fixture.rules);
   for (const action of fixture.actions) {
     const ok = action.startsWith("upgrade:")
       ? game.chooseUpgrade(s, action.slice(8))
@@ -214,6 +214,7 @@ test("a repeated dodge cycle is reported as a bot stall, not an impossible seed"
   const { simulate, replay } =
     await import("../scripts/balance/simulation.mjs");
   const row = simulate({
+    rules: 1,
     seed: 7,
     kit: "relay",
     policy: "tactical",
@@ -228,6 +229,7 @@ test("a repeated dodge cycle is reported as a bot stall, not an impossible seed"
 test("cycle diagnostics allow exploration memory time to escape repeated states", async () => {
   const { simulate } = await import("../scripts/balance/simulation.mjs");
   const row = simulate({
+    rules: 1,
     seed: 1,
     kit: "courier",
     policy: "tactical",

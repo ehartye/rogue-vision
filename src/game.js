@@ -199,19 +199,38 @@ function buildFloor(s) {
   );
   for (const kind of ["med", "cell", "signal", "med", "signal"])
     s.items.push({ ...cells.pop(), kind });
+  delete s.relay;
+  if (s.rules === 2 && s.floor === 1) {
+    // Use remaining free cells without advancing world RNG or changing spawns.
+    // Prefer a small detour near the uplink over a second map-wide errand.
+    const cost = (p) => {
+      const end = fromExit.get(`${p.x},${p.y}`);
+      const detour =
+        fromStart.get(`${p.x},${p.y}`) + end - fromStart.get("9,9");
+      return Math.abs(end - 3) * 4 + Math.abs(detour - 2);
+    };
+    const place = [...cells]
+      .filter((p) => !same(p, s.exit))
+      .sort((a, b) => cost(a) - cost(b))[0];
+    s.relay = { x: place.x, y: place.y, progress: 0 };
+  }
   s.seen = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
   s.visible = [];
   s.phase = "playing";
   s.message = DISTRICTS[s.floor].story;
+  if (s.relay)
+    s.message = "Restore the lantern relay: hold there or pulse nearby.";
   s.event = "arrival";
   reveal(s);
 }
-export function newRun(seed = Date.now() >>> 0, kit = "courier") {
+export function newRun(seed = Date.now() >>> 0, kit = "courier", rules = 2) {
   if (!Object.hasOwn(KITS, kit)) throw Error("Unknown starting kit");
+  if (![1, 2].includes(rules)) throw Error("Unknown expedition rules");
   const loadout = KITS[kit];
   const s = {
     version: 1,
     balance: 2,
+    rules,
     kit,
     meleeHits: 0,
     seed: seed >>> 0,
@@ -484,8 +503,23 @@ export function act(s, action) {
     s.event = "pickup";
     emit(s, "pickup");
   }
+  if (s.relay && s.relay.progress < 3) {
+    if (
+      action === "pulse" &&
+      distance(s.player, s.relay) <= s.player.pulseRange
+    )
+      s.relay.progress = 3;
+    else if (same(s.player, s.relay)) {
+      s.relay.progress++;
+      if (!melee && !item)
+        s.message = `Lantern relay ${s.relay.progress}/3. Hold here or pulse.`;
+    }
+    if (s.relay.progress === 3)
+      s.message = "Lantern relay restored. The uplink is live.";
+  }
   if (
     same(s.player, s.exit) &&
+    (!s.relay || s.relay.progress === 3) &&
     !(s.floor === 3 && s.enemies.some((e) => e.kind === "conductor"))
   ) {
     s.score += 100;
@@ -504,7 +538,10 @@ export function act(s, action) {
     return true;
   }
   if (same(s.player, s.exit))
-    s.message = "Uplink jammed. Silence the Conductor first.";
+    s.message =
+      s.relay?.progress < 3
+        ? "Uplink dark. Power the lantern relay first."
+        : "Uplink jammed. Silence the Conductor first.";
   enemyTurn(s);
   if (s.phase === "playing" && !wasThreatened && threatened(s))
     emit(s, "warning");
@@ -624,6 +661,7 @@ export function decodeSave(raw) {
     const pos = (p) => p && integer(p.x, 0, 10) && integer(p.y, 0, 10);
     if (
       (s.balance !== undefined && ![1, 2].includes(s.balance)) ||
+      (s.rules !== undefined && ![1, 2].includes(s.rules)) ||
       (s.kit !== undefined && !Object.hasOwn(KITS, s.kit)) ||
       (s.meleeHits !== undefined && !integer(s.meleeHits, 0, 1000000)) ||
       (s.id !== undefined &&
@@ -654,6 +692,18 @@ export function decodeSave(raw) {
     )
       return null;
     const p = s.player;
+    if (s.rules === 2 && s.floor === 1) {
+      const r = s.relay;
+      if (
+        !pos(r) ||
+        !integer(r.progress, 0, 3) ||
+        s.tiles[r.y][r.x] !== 0 ||
+        same(r, s.exit) ||
+        same(r, s.landmark) ||
+        (s.phase === "upgrade" && r.progress !== 3)
+      )
+        return null;
+    } else if (s.relay !== undefined) return null;
     if (
       s.landmark !== undefined &&
       (!pos(s.landmark) ||

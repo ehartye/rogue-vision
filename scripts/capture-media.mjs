@@ -18,7 +18,7 @@ const base =
 const output = "media/screenshots";
 await mkdir(output, { recursive: true });
 const clone = (s) => structuredClone(s);
-const expedition = newRun(route.seed);
+const expedition = newRun(route.seed, "courier", route.rules);
 expedition.id = "media-expedition";
 let tactics,
   upgrade,

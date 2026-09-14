@@ -64,7 +64,7 @@ test("small and wide viewports keep the complete composition centered", async ({
   }
 });
 test("upgrade footer text never overlaps the controls", async ({ page }) => {
-  const run = newRun(fixture.seed);
+  const run = newRun(fixture.seed, "courier", fixture.rules);
   for (const action of fixture.actions.slice(
     0,
     fixture.actions.findIndex((a) => a.startsWith("upgrade:")),
