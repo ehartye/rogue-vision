@@ -8,7 +8,8 @@
     "build": "node scripts/build.mjs",
     "dev": "node scripts/serve.mjs",
     "test:browser": "playwright test",
-    "audio:render": "node scripts/render-audio.mjs"
+    "audio:render": "node scripts/render-audio.mjs",
+    "balance": "node scripts/measure-balance.mjs"
   },
   "devDependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
