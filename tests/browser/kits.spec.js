@@ -103,6 +103,10 @@ test("build summary fits three modifications and pauses the expedition", async (
   await press(page, "ArrowDown");
   await press(page, "Enter");
   await expect(
+    page.getByRole("dialog", { name: "Expedition options" }),
+  ).toBeVisible();
+  await press(page, "Enter");
+  await expect(
     page.getByRole("heading", { name: "Relay build" }),
   ).toBeVisible();
   await fit(page);
@@ -112,6 +116,7 @@ test("build summary fits three modifications and pauses the expedition", async (
   await expect(page.getByText("Aftershock blade")).toBeVisible();
   await page.screenshot({ path: ".artifacts/relay-build.png" });
   await press(page, "Enter");
+  await press(page, "Escape");
   await press(page, "Escape");
   await expect(page.locator("[data-turn]")).toHaveText("0");
 });

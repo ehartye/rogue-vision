@@ -164,6 +164,7 @@ try {
   await capture("build-synergies", build, async ({ choose, press }) => {
     await choose("resume");
     await press("Enter");
+    await choose("more");
     await choose("build");
   });
   await capture("offline-ready", build, async ({ choose, context, page }) => {

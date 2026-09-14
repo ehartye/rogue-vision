@@ -362,6 +362,73 @@ p {
   font-size: 16px;
   color: var(--muted);
 }
+.side-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+.side-actions .menu-button {
+  min-height: 88px;
+  padding: 8px 10px;
+  gap: 2px;
+  background: #000;
+}
+.side-actions .menu-button strong {
+  font-size: 24px;
+}
+.side-actions .menu-button small {
+  font-size: 18px;
+  margin-top: 3px;
+}
+.side-actions .marker {
+  display: none;
+}
+.side-actions [aria-disabled="true"] {
+  color: var(--muted);
+  border-style: dashed;
+}
+.action-sidebar .threat-note {
+  margin-top: 14px;
+  font-size: 18px;
+}
+.modal-layer {
+  position: absolute;
+  inset: 0;
+  background: #0009;
+}
+.mission-modal {
+  position: absolute;
+  inset: 16px 20px;
+  background: #000;
+  border: 2px solid var(--ice);
+  border-radius: 5px;
+}
+.mission-modal .screen {
+  padding: 20px 24px;
+}
+.mission-modal .panel-heading {
+  font-size: 30px;
+  margin-top: 10px;
+}
+.mission-modal .panel-intro {
+  font-size: 21px;
+}
+.mission-modal .build-stats {
+  margin: 12px 0;
+  font-size: 20px;
+}
+.mission-modal .build-mods {
+  gap: 10px;
+  font-size: 19px;
+}
+.mission-modal .build-mods h3 {
+  font-size: 22px;
+}
+.mission-modal .guide-next {
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+}
 .mission-message {
   position: absolute;
   left: 24px;
