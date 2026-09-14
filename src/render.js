@@ -1,10 +1,6 @@
 import { DISTRICTS } from "./game.js";
-import {
-  artReady,
-  drawSprite,
-  drawChinatownWall,
-  drawChinatownStreet,
-} from "./art.js";
+import { artReady, drawSprite } from "./art.js";
+import { drawScenery } from "./scenery.js";
 const C = {
   ice: "#80e8ff",
   white: "#effcff",
@@ -188,63 +184,7 @@ export function drawMap(canvas, s) {
   const threats = new Set(
     s.enemies.flatMap((e) => e.intent.map((p) => `${p.x},${p.y}`)),
   );
-  for (let y = 0; y < 11; y++)
-    for (let x = 0; x < 11; x++) {
-      const px = x * 36,
-        py = y * 36,
-        seen = s.seen[y][x],
-        visible = s.visible[y][x];
-      if (!seen) {
-        c.fillStyle = "#182f38";
-        c.fillRect(px + 17, py + 17, 2, 2);
-        continue;
-      }
-      if (s.tiles[y][x] === 1) {
-        if (s.floor === 1 && drawChinatownWall(c, s, x, y)) continue;
-        const accent = ["#497a86", "#82704e", "#597568", "#6f6386"][s.floor];
-        c.strokeStyle = visible ? accent : "#20343c";
-        c.lineWidth = 2;
-        c.strokeRect(px + 4, py + 4, 27, 27);
-        if (visible) {
-          // Pier slats, market awnings, tram rails, and registration booths.
-          const motifs = [
-            [
-              [7, 13],
-              [27, 13],
-              [27, 23],
-              [7, 23],
-            ],
-            [
-              [7, 18],
-              [13, 11],
-              [19, 18],
-              [25, 11],
-            ],
-            [
-              [12, 8],
-              [12, 27],
-              [24, 27],
-              [24, 8],
-            ],
-            [
-              [10, 25],
-              [10, 12],
-              [25, 12],
-              [25, 25],
-            ],
-          ];
-          line(
-            c,
-            motifs[s.floor].map(([a, b]) => [px + a, py + b]),
-            accent,
-          );
-        }
-      } else {
-        if (s.floor === 1) drawChinatownStreet(c, x, y, visible);
-        c.fillStyle = visible ? "#48737d" : "#213a43";
-        c.fillRect(px + 17, py + 17, 3, 3);
-      }
-    }
+  drawScenery(c, s);
   const gateDrawn =
     s.floor === 1 &&
     s.landmark &&

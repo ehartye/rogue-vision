@@ -10,7 +10,7 @@ if (dirname(output) !== process.cwd() || !output.endsWith("dist"))
 await rm(output, { recursive: true, force: true });
 await mkdir("dist/assets", { recursive: true });
 await mkdir("dist/assets/art", { recursive: true });
-for (const file of ["people.png", "chinatown-frontage.png"])
+for (const file of ["people.png"])
   await cp(`assets/art/${file}`, `dist/assets/art/${file}`);
 for (const file of ["style.css", "manifest.webmanifest"])
   await cp(file, `dist/${file}`);
@@ -101,7 +101,6 @@ const files = [
   "assets/reading.woff2",
   "assets/icon.png",
   "assets/art/people.png",
-  "assets/art/chinatown-frontage.png",
 ];
 const hash = createHash("sha256");
 let bytes = 0;
