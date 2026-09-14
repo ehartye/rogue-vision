@@ -50,24 +50,28 @@ export const DISTRICTS = [
     tag: "THE LAST FERRY",
     story: "The ferries stopped. The fog did not. Find the uplink.",
     color: "#80e8ff",
+    hostiles: 6,
   },
   {
     name: "Chinatown",
     tag: "GHOST CIRCUIT",
     story: "Lanterns flicker in sync. Something is listening.",
     color: "#ffd278",
+    hostiles: 8,
   },
   {
     name: "Market Street",
     tag: "DEAD TRANSIT",
     story: "The last tram is carrying an empty crowd.",
     color: "#a1f3ce",
+    hostiles: 10,
   },
   {
     name: "Moscone",
     tag: "THE FINAL KEYNOTE",
     story: "Dreamforce is still live. Silence the Conductor.",
     color: "#eea9ff",
+    hostiles: 7,
   },
 ];
 export const UPGRADES = {
@@ -113,11 +117,21 @@ export const UPGRADES = {
   },
 };
 export const ENEMIES = {
+  husk: { name: "Husk", hp: 6, damage: 4, score: 15 },
+  runner: { name: "Runner", hp: 4, damage: 4, score: 20 },
+  spitter: { name: "Relay", hp: 5, damage: 5, score: 25 },
+  conductor: { name: "Conductor", hp: 20, damage: 4, score: 150 },
+};
+// Existing expeditions retain their balance, including pending attacks and
+// districts not generated yet. New runs opt in; the save envelope stays v1.
+const LEGACY_ENEMIES = {
   husk: { name: "Husk", hp: 5, damage: 2, score: 15 },
   runner: { name: "Runner", hp: 3, damage: 2, score: 20 },
   spitter: { name: "Relay", hp: 4, damage: 3, score: 25 },
   conductor: { name: "Conductor", hp: 20, damage: 4, score: 150 },
 };
+const enemyStats = (s, kind) =>
+  (s.balance === 2 ? ENEMIES : LEGACY_ENEMIES)[kind];
 const vectors = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
 const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 const same = (a, b) => a.x === b.x && a.y === b.y;
@@ -153,7 +167,8 @@ function buildFloor(s) {
   shuffle(s, cells);
   s.enemies = [];
   s.items = [];
-  for (let i = 0; i < 4 + s.floor; i++) {
+  const count = s.balance === 2 ? DISTRICTS[s.floor].hostiles : 4 + s.floor;
+  for (let i = 0; i < count; i++) {
     const kind =
       i === 0 && s.floor === 3
         ? "conductor"
@@ -162,7 +177,7 @@ function buildFloor(s) {
           : i % 3 === 1
             ? "runner"
             : "husk";
-    const hp = ENEMIES[kind].hp;
+    const hp = enemyStats(s, kind).hp;
     s.enemies.push({
       ...cells.pop(),
       id: i,
@@ -196,6 +211,7 @@ export function newRun(seed = Date.now() >>> 0, kit = "courier") {
   const loadout = KITS[kit];
   const s = {
     version: 1,
+    balance: 2,
     kit,
     meleeHits: 0,
     seed: seed >>> 0,
@@ -292,7 +308,7 @@ function removeDead(s) {
   const dead = s.enemies.filter((e) => e.hp <= 0);
   for (const e of dead) {
     s.kills++;
-    s.score += ENEMIES[e.kind].score;
+    s.score += enemyStats(s, e.kind).score;
     repair(s, s.player.siphon);
     if (s.kills % 3 === 0)
       s.player.charges = Math.min(s.player.maxCharges, s.player.charges + 1);
@@ -315,12 +331,10 @@ function enemyTurn(s) {
     }
     if (e.intent.length) {
       if (e.intent.some((p) => same(p, s.player))) {
-        metrics.get(s).damageTaken += Math.min(
-          s.player.hp,
-          ENEMIES[e.kind].damage,
-        );
-        s.player.hp = Math.max(0, s.player.hp - ENEMIES[e.kind].damage);
-        s.message = `${ENEMIES[e.kind].name} hit for ${ENEMIES[e.kind].damage}. Move off marked tiles.`;
+        const { name, damage } = enemyStats(s, e.kind);
+        metrics.get(s).damageTaken += Math.min(s.player.hp, damage);
+        s.player.hp = Math.max(0, s.player.hp - damage);
+        s.message = `${name} hit for ${damage}. Move off marked tiles.`;
         s.event = "damage";
         emit(s, "damage");
       }
@@ -555,8 +569,8 @@ export function chooseEncounter(s, choice) {
           ...cell,
           id: Math.max(-1, ...s.enemies.map((e) => e.id)) + 1,
           kind: "runner",
-          hp: 3,
-          maxHp: 3,
+          hp: enemyStats(s, "runner").hp,
+          maxHp: enemyStats(s, "runner").hp,
           stun: 0,
           intent: [],
         });
@@ -609,6 +623,7 @@ export function decodeSave(raw) {
       Number.isInteger(v) && v >= min && v <= max;
     const pos = (p) => p && integer(p.x, 0, 10) && integer(p.y, 0, 10);
     if (
+      (s.balance !== undefined && ![1, 2].includes(s.balance)) ||
       (s.kit !== undefined && !Object.hasOwn(KITS, s.kit)) ||
       (s.meleeHits !== undefined && !integer(s.meleeHits, 0, 1000000)) ||
       (s.id !== undefined &&
