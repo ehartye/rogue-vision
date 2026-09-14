@@ -1,6 +1,16 @@
 import { PATCHES, selectCues } from "./audio-cues.js";
+import { createTransport } from "./score-transport.js";
 
 const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
+
+export function duckMusic(gain, now, duration) {
+  gain.cancelAndHoldAtTime(now);
+  // Anchor the start: without this, a first ramp also attenuates the preceding
+  // music when rendered offline (and can ramp from an older automation point).
+  gain.setValueAtTime(gain.value, now);
+  gain.linearRampToValueAtTime(0.2, now + 0.012);
+  gain.setTargetAtTime(0.65, now + duration, 0.18);
+}
 
 // The same native graph serves live playback and OfflineAudioContext renders.
 // Each voice owns its attack/release and disconnects after its scheduled stop.
@@ -26,7 +36,7 @@ export function schedulePatch(
     gain.gain.setValueAtTime(0, start);
     gain.gain.linearRampToValueAtTime(
       note.gain,
-      start + Math.min(0.012, note.duration / 4),
+      start + Math.min(note.attack ?? 0.012, note.duration / 2),
     );
     gain.gain.exponentialRampToValueAtTime(0.0001, end);
     gain.gain.linearRampToValueAtTime(0, end + 0.008);
@@ -64,6 +74,10 @@ export function createAudio({
 } = {}) {
   let context,
     master,
+    music,
+    transport,
+    scene = null,
+    lifecycle = 0,
     enabled = false,
     epoch = 0,
     pending = false;
@@ -75,16 +89,82 @@ export function createAudio({
     active.clear();
   }
   function suspend() {
+    lifecycle++;
+    transport?.stop();
     clear();
     if (master) master.gain.value = 0;
     context?.suspend().catch(() => {});
+  }
+  async function ready() {
+    if (!context || context.state === "closed") {
+      context = createContext();
+      if (!context) return false;
+      master = context.createGain();
+      master.connect(context.destination);
+      music = context.createGain();
+      music.gain.value = 0.65;
+      music.connect(master);
+      transport = createTransport({
+        context,
+        schedule: (notes, when, done) =>
+          schedulePatch(context, music, notes, when, done),
+      });
+      const observed = context;
+      context.addEventListener("statechange", () => {
+        if (context !== observed) return;
+        if (context.state !== "running") {
+          transport.stop();
+          // A delayed 'suspended' notification can arrive during a NEW resume.
+          // Stop old voices without invalidating that newer scene/request.
+          if (context.state === "interrupted" || context.state === "closed")
+            clear();
+          else {
+            for (const group of active) group.stop();
+            active.clear();
+          }
+        } else if (scene && enabled && !isHidden()) {
+          master.gain.value = 0.8;
+          transport.update(scene);
+        }
+      });
+    }
+    if (context.state !== "running") await context.resume();
+    return context.state === "running";
+  }
+  async function resume() {
+    if (!scene || !enabled || isHidden()) return;
+    const ticket = lifecycle;
+    try {
+      if (
+        !(await ready()) ||
+        ticket !== lifecycle ||
+        !enabled ||
+        isHidden() ||
+        !scene
+      )
+        return;
+      master.gain.value = 0.8;
+      transport.update(scene);
+    } catch {
+      // Retry on the next gesture if the browser cannot resume audio yet.
+    }
   }
   return {
     setEnabled(value) {
       enabled = value;
       if (!enabled) suspend();
+      else return resume();
     },
     suspend,
+    resume,
+    setScene(next) {
+      if (!next || next.seed !== scene?.seed || next.floor !== scene?.floor) {
+        lifecycle++;
+        transport?.stop();
+      }
+      scene = next ? { ...next } : null;
+      return resume();
+    },
     async play(events) {
       if (!enabled || isHidden()) return;
       const selected = selectCues(events);
@@ -95,13 +175,7 @@ export function createAudio({
       const ticket = epoch;
       pending = true;
       try {
-        if (!context || context.state === "closed") {
-          context = createContext();
-          if (!context) return;
-          master = context.createGain();
-          master.connect(context.destination);
-        }
-        if (context.state !== "running") await context.resume();
+        if (!(await ready())) return;
         if (
           !enabled ||
           isHidden() ||
@@ -110,6 +184,16 @@ export function createAudio({
         )
           return;
         master.gain.value = 0.8;
+        if (scene) transport.update(scene);
+        if (selected[0] !== "focus") {
+          const now = context.currentTime;
+          const duration = Math.max(
+            ...selected.flatMap((id, i) =>
+              PATCHES[id].map((n) => i * 0.18 + n.at + n.duration),
+            ),
+          );
+          duckMusic(music.gain, now, duration);
+        }
         selected.forEach((id, i) => {
           const group = schedulePatch(
             context,

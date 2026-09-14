@@ -24,6 +24,7 @@ import {
 import { createInputFilter, decodeKey } from "./input.js";
 import { drawMap, drawSkyline, mapDescription } from "./render.js";
 import { createAudio } from "./audio.js";
+import { musicState } from "./score.js";
 const audio = createAudio();
 const app = document.querySelector("#app"),
   SAVE = "fogfall.run.v1",
@@ -128,6 +129,7 @@ function settleAction(action) {
 }
 function render() {
   if (!run && ["mission", "actions"].includes(screen)) screen = "title";
+  audio.setScene(screen === "mission" ? musicState(run) : null);
   app.className = "";
   let html = "";
   if (screen === "title") {
@@ -154,7 +156,7 @@ function render() {
   else if (screen === "actions") {
     html = `<section class="screen" data-screen="actions">${heading("TIME IS HELD", "Choose your next move", "The city moves only when you do.")}<div class="menu-stack tight">${button("pulse", `Discharge pulse · ${run.player.charges} left`, `${run.player.pulseDamage} damage · ${run.player.pulseRange} tiles · disrupts strikes`, true)}${button("wait", "Wait one turn", "Hold position while hostiles act")}${button("build", "Your build", "Starting kit, upgrades & synergies")}${button("return", "Return to streets", "Keep exploring")}</div>${foot("Swipe to choose · Pinch to act")}</section>`;
   } else if (screen === "kit") {
-    html = `<section class="screen" data-screen="kit">${heading("EXPEDITION EQUIPMENT", "Field kit", recoveryNotice || "Pack your signal before you travel.")}<div class="menu-stack">${button("guide", "How to play", "A three-page field guide", true)}${button("sound", `Sound: ${sound ? "on" : "off"}`, "Optional synthesized action cues")}${button("diagnostics", "Travel readiness", "Offline cache, save & display checks")}${run && ["playing", "upgrade", "encounter"].includes(run.phase) ? button("start", "New expedition", "Leave this run and start fresh") : button("return", "Return", "Back to the city")}</div><p class="panel-foot small">Back gesture returns to the title.</p></section>`;
+    html = `<section class="screen" data-screen="kit">${heading("EXPEDITION EQUIPMENT", "Field kit", recoveryNotice || "Pack your signal before you travel.")}<div class="menu-stack">${button("guide", "How to play", "A three-page field guide", true)}${button("sound", `Sound: ${sound ? "on" : "off"}`, "Signal score & action cues")}${button("diagnostics", "Travel readiness", "Offline cache, save & display checks")}${run && ["playing", "upgrade", "encounter"].includes(run.phase) ? button("start", "New expedition", "Leave this run and start fresh") : button("return", "Return", "Back to the city")}</div><p class="panel-foot small">Back gesture returns to the title.</p></section>`;
   } else if (screen === "guide") html = guideScreen();
   else if (screen === "diagnostics") {
     html = `<section class="screen" data-screen="diagnostics">${heading("PRE-FLIGHT CHECK", "Travel readiness")}<div class="diag"><div class="diag-row"><span>Game files</span><span data-offline>${cacheState}</span></div><div class="diag-row"><span>Run & unlocks</span><span>${saveState}</span></div><div class="diag-row"><span>Connection</span><span>${navigator.onLine ? "Online" : "Offline"}</span></div><div class="diag-row"><span>Composition</span><span>600 × 600</span></div><div class="diag-row"><span>Last map draw</span><span>${renderMs.toFixed(1)} ms</span></div><div class="diag-row"><span>Last input</span><span>${esc(lastKey)}</span></div></div><p class="diag-note">Open once on the glasses until “Offline ready”. Then disconnect, reopen, and resume a run before departure. Cache can be removed by the device.</p><div class="guide-next">${button("return", "Return", "Back to the field kit", true)}</div></section>`;
@@ -415,7 +417,7 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     persist();
     audio.suspend();
-  }
+  } else audio.resume();
 });
 addEventListener("pagehide", () => {
   persist();
