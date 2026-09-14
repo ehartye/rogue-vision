@@ -42,13 +42,13 @@ Add the public URL as a Web App in the Meta AI app (Developer Mode enabled). Ope
 Scan the [add-to-glasses QR code](assets/add-to-glasses.png) with your phone to open Meta's setup deep link. It was generated locally using Meta's official toolkit.
 
 - **Swipe:** move one square; move into a hostile to attack.
-- **Pinch:** open actions, then swipe to choose and pinch to confirm.
+- **Pinch:** open Pulse, Wait and More in the right panel while keeping the map visible. Pulse starts selected; pinch again to fire, or swipe to choose another action. Back returns to movement without spending a turn.
 - **Back:** close the current screen with progress saved. Keep going back to reach the title; Back at the title is left to the native shell.
 - **Pulse:** damages and disrupts nearby hostiles. Every third kill restores one charge.
 - **Coral warning tiles:** a strike lands there next turn. Move away first.
 - **Cyan uplink:** the lower-right exit. Install an upgrade between districts. Defeat the Conductor before the final extraction.
 - **Gold ring:** an optional landmark deal. Inspect the cost, then accept or pass safely. Each district has its own street pattern; supplies reward exploration away from the exit route.
-- **Your build:** open actions to inspect your starting kit and installed modifications without spending a turn. Aftershock strengthens melee attacks on disrupted enemies; Kinetic recovery recharges pulses through melee strikes. Upgrade effects stack.
+- **More:** opens a modal for Your build and Sound. Inspect your starting kit and installed modifications without spending a turn. Aftershock strengthens melee attacks on disrupted enemies; Kinetic recovery recharges pulses through melee strikes. Upgrade effects stack. Back from either modal returns to the action panel.
 
 Choose a starting kit before each new expedition. Courier is balanced and always available. Relay unlocks after 10 cumulative kills: less hull and blade damage, stronger pulses, and a charge refund for pulse multi-kills. Breaker unlocks after three cumulative district clears: more hull and blade damage, fewer pulses, and hull recovery on melee kills. Losses and abandoned runs contribute. Locks show progress, and swiping between kits explains their passive effect. Unlocks are local to this browser/device and are lost if its app data is cleared.
 

@@ -106,9 +106,12 @@ function foot(left = "Swipe to choose · Pinch to select") {
 function heading(eyebrow, title, intro = "") {
   return `<p class="eyebrow">${eyebrow}</p><h2 class="panel-heading">${title}</h2>${intro ? `<p class="panel-intro">${intro}</p>` : ""}`;
 }
-function go(next) {
-  history.replaceState({ screen, focus: focusIndex }, "");
-  history.pushState({ screen: next, focus: 0 }, "");
+function go(next, replace = false) {
+  if (!replace) history.replaceState({ screen, focus: focusIndex }, "");
+  history[replace ? "replaceState" : "pushState"](
+    { screen: next, focus: 0 },
+    "",
+  );
   screen = next;
   focusIndex = 0;
   render();
@@ -128,7 +131,8 @@ function settleAction(action) {
   render();
 }
 function render() {
-  if (!run && ["mission", "actions"].includes(screen)) screen = "title";
+  if (!run && ["mission", "actions", "more", "build"].includes(screen))
+    screen = "title";
   audio.setScene(screen === "mission" ? musicState(run) : null);
   app.className = "";
   let html = "";
@@ -136,7 +140,7 @@ function render() {
     const active =
       run && ["playing", "upgrade", "encounter"].includes(run.phase);
     html = `<section class="screen" data-screen="title"><div class="title-top"><p class="eyebrow">ROGUE VISION / SAN FRANCISCO</p><span class="small muted">BEST ${profile.best}</span></div><h1 class="brand">FOG<span>FALL</span></h1><p class="subtitle">THE CITY LOST ITS SIGNAL. YOU DIDN’T.</p><canvas class="skyline" width="600" height="180" aria-hidden="true"></canvas><p class="title-story">A dead city. A live keynote. Find daylight.</p><div class="title-actions">${button(active ? "resume" : "start", active ? "Resume expedition" : "Enter the fog", recoveryNotice || (active ? `${DISTRICTS[run.floor].name} · Hull ${run.player.hp}/${run.player.maxHp} · Turn ${run.turn}` : "Swipe to move. Pinch for powers."), true)}${button("kit", "Field kit", "Controls, sound & travel readiness")}</div>${foot(storageOk ? "Wrist only · No clock ticking" : saveState)}</section>`;
-  } else if (screen === "mission") {
+  } else if (["mission", "actions", "more", "build"].includes(screen)) {
     if (run.phase === "encounter") html = encounterScreen();
     else if (run.phase === "upgrade") html = upgradeScreen();
     else if (["won", "dead"].includes(run.phase)) html = resultScreen();
@@ -147,15 +151,15 @@ function render() {
       const threat = run.enemies.some((e) =>
         e.intent.some((t) => t.x === p.x && t.y === p.y),
       );
-      html = `<section class="screen mission" data-screen="mission"><div class="district-top"><p class="eyebrow">${d.tag}</p><span class="small muted">TURN <b data-turn>${run.turn}</b></span></div><div class="mission-header"><h1 class="district-name">${d.name}</h1><span class="sector number">0${run.floor + 1}<span class="muted"> / 04</span></span></div><div class="vitals"><div class="health"><span class="${p.hp <= 6 ? "red" : ""}">HULL <b>${p.hp}</b><span class="muted">/${p.maxHp}</span></span><span class="health-bar"><i style="width:${(100 * p.hp) / p.maxHp}%;${p.hp <= 6 ? "background:var(--red)" : ""}"></i></span></div><span class="gold">ATK ${p.attack}</span><span class="muted">${run.score} PTS</span></div><div class="board-row"><canvas class="map" width="396" height="396" tabindex="0" aria-label="${esc(mapDescription(run))}"></canvas><aside class="sidebar"><div class="side-label">PULSE</div><div class="pulse-dots" aria-label="${p.charges} of ${p.maxCharges} charges">${"◆".repeat(p.charges)}${"◇".repeat(p.maxCharges - p.charges)}</div><div class="small muted">Pinch for actions</div><div class="route">${DISTRICTS.map((district, i) => `<div class="route-stop ${i === run.floor ? "current" : i < run.floor ? "done" : ""}"><i></i>${district.name}</div>`).join("")}</div><div class="threat-note ${threat ? "red" : ""}">${threat ? "! Strike incoming<br>Leave marked tiles" : visible.length ? `${visible.length} hostile${visible.length > 1 ? "s" : ""} in sight` : "No hostiles<br>in sight"}</div><div class="side-bottom">◎ Landmark<br>◇ Signal<br>+ Hull kit<br>⇩ Uplink</div></aside></div><p class="mission-message ${run.event === "damage" ? "red" : ""}" role="status">${esc(run.message)}</p>${foot(`Swipe: move / attack · Pinch: actions${storageOk ? "" : " · NOT SAVED"}`)}</section>`;
+      html = `<section class="screen mission" data-screen="${screen === "actions" ? "actions" : "mission"}" ${["more", "build"].includes(screen) ? "inert" : ""}><div class="district-top"><p class="eyebrow">${d.tag}</p><span class="small muted">TURN <b data-turn>${run.turn}</b></span></div><div class="mission-header"><h1 class="district-name">${d.name}</h1><span class="sector number">0${run.floor + 1}<span class="muted"> / 04</span></span></div><div class="vitals"><div class="health"><span class="${p.hp <= 6 ? "red" : ""}">HULL <b>${p.hp}</b><span class="muted">/${p.maxHp}</span></span><span class="health-bar"><i style="width:${(100 * p.hp) / p.maxHp}%;${p.hp <= 6 ? "background:var(--red)" : ""}"></i></span></div><span class="gold">ATK ${p.attack}</span><span class="muted">${run.score} PTS</span></div><div class="board-row"><canvas class="map" width="396" height="396" tabindex="0" aria-label="${esc(mapDescription(run))}"></canvas>${missionSidebar(visible.length, threat)}</div><p class="mission-message ${run.event === "damage" ? "red" : ""}" role="status">${esc(run.message)}</p>${foot(`${screen === "mission" ? "Swipe: move / attack · Pinch: actions" : "Swipe: choose · Pinch: act · Back: map"}${storageOk ? "" : " · NOT SAVED"}`)}</section>`;
+      if (screen === "more")
+        html += missionModal("Expedition options", moreScreen());
+      if (screen === "build") html += missionModal("Your build", buildScreen());
       if (run.event === "pulse") app.className = "pulse-flash";
       if (run.event === "damage") app.className = "damage-flash";
     }
   } else if (screen === "loadout") html = loadoutScreen();
-  else if (screen === "build") html = buildScreen();
-  else if (screen === "actions") {
-    html = `<section class="screen" data-screen="actions">${heading("TIME IS HELD", "Choose your next move", "The city moves only when you do.")}<div class="menu-stack tight">${button("pulse", `Discharge pulse · ${run.player.charges} left`, `${run.player.pulseDamage} damage · ${run.player.pulseRange} tiles · disrupts strikes`, true)}${button("wait", "Wait one turn", "Hold position while hostiles act")}${button("build", "Your build", "Starting kit, upgrades & synergies")}${button("return", "Return to streets", "Keep exploring")}</div>${foot("Swipe to choose · Pinch to act")}</section>`;
-  } else if (screen === "kit") {
+  else if (screen === "kit") {
     html = `<section class="screen" data-screen="kit">${heading("EXPEDITION EQUIPMENT", "Field kit", recoveryNotice || "Pack your signal before you travel.")}<div class="menu-stack">${button("guide", "How to play", "A three-page field guide", true)}${button("sound", `Sound: ${sound ? "on" : "off"}`, "Signal score & action cues")}${button("diagnostics", "Travel readiness", "Offline cache, save & display checks")}${run && ["playing", "upgrade", "encounter"].includes(run.phase) ? button("start", "New expedition", "Leave this run and start fresh") : button("return", "Return", "Back to the city")}</div><p class="panel-foot small">Back gesture returns to the title.</p></section>`;
   } else if (screen === "guide") html = guideScreen();
   else if (screen === "diagnostics") {
@@ -171,9 +175,28 @@ function render() {
   }
   const skyline = app.querySelector(".skyline");
   if (skyline) drawSkyline(skyline);
-  const buttons = Array.from(app.querySelectorAll("button"));
+  const buttons = menuButtons();
   focusIndex = Math.min(focusIndex, Math.max(0, buttons.length - 1));
   buttons[focusIndex]?.focus({ preventScroll: true });
+}
+function menuButtons() {
+  return [
+    ...(app.querySelector('[role="dialog"]') ?? app).querySelectorAll("button"),
+  ];
+}
+function missionSidebar(hostiles, threatened) {
+  const p = run.player;
+  const threat = `<div class="threat-note ${threatened ? "red" : ""}">${threatened ? "! Strike incoming<br>Leave marked tiles" : hostiles ? `${hostiles} hostile${hostiles > 1 ? "s" : ""} in sight` : "No hostiles<br>in sight"}</div>`;
+  if (screen !== "mission") {
+    return `<aside class="sidebar action-sidebar" aria-label="Actions"><div class="side-label">TIME HELD</div><div class="side-actions">${button("pulse", "Pulse", p.charges ? `${p.charges}/${p.maxCharges} charges<br>${p.pulseDamage} dmg · ${p.pulseRange} tiles` : "No charges", true).replace('data-action="pulse"', `data-action="pulse" aria-disabled="${p.charges === 0}"`)}${button("wait", "Wait", "Spend 1 turn")}${button("more", "More", "Build & sound")}</div>${threat}</aside>`;
+  }
+  return `<aside class="sidebar"><div class="side-label">PULSE</div><div class="pulse-dots" aria-label="${p.charges} of ${p.maxCharges} charges">${"◆".repeat(p.charges)}${"◇".repeat(p.maxCharges - p.charges)}</div><div class="small muted">Pinch for actions</div><div class="route">${DISTRICTS.map((district, i) => `<div class="route-stop ${i === run.floor ? "current" : i < run.floor ? "done" : ""}"><i></i>${district.name}</div>`).join("")}</div>${threat}<div class="side-bottom">◎ Landmark<br>◇ Signal<br>+ Hull kit<br>⇩ Uplink</div></aside>`;
+}
+function missionModal(name, content) {
+  return `<div class="modal-layer"><div class="mission-modal" role="dialog" aria-modal="true" aria-label="${name}">${content}</div></div>`;
+}
+function moreScreen() {
+  return `<section class="screen" data-screen="more">${heading("TIME IS HELD", "Expedition options", "Check your kit or tune the sound.")}<div class="menu-stack">${button("build", "Your build", "Kit, upgrades & synergies", true)}${button("sound", `Sound: ${sound ? "on" : "off"}`, "Signal score & action cues")}${button("return", "Return to actions", "No turn spent")}</div></section>`;
 }
 function upgradeScreen() {
   return `<section class="screen" data-screen="upgrade">${heading("UPLINK SECURED", `${DISTRICTS[run.floor].name} is clear`, "Install one modification. Repair 3 hull.<br>Next stop: " + DISTRICTS[run.floor + 1].name + ".")}<div class="menu-stack">${run.choices.map((id) => button(`upgrade:${id}`, UPGRADES[id].name, UPGRADES[id].text, true)).join("")}</div><p class="panel-foot">Your modifications stack for this expedition.</p>${foot()}</section>`;
@@ -195,7 +218,7 @@ function guideScreen() {
       ],
       [
         "Pinch for actions",
-        "Pulse hits nearby enemies and interrupts their strikes. Wait lets enemies move.",
+        "Pinch opens actions beside the map. Swipe to choose; pinch to act. Back returns to movement.",
       ],
       [
         "Put your hand down",
@@ -275,7 +298,7 @@ function loadoutScreen() {
 function buildScreen() {
   const k = KITS[run.kit ?? "courier"],
     p = run.player;
-  return `<section class="screen" data-screen="build">${heading("TIME IS HELD", k.name + " build", k.passive)}<p class="build-stats">Attack ${p.attack} · Pulse ${p.pulseDamage} damage / ${p.pulseRange} tiles<br>Hull ${p.hp}/${p.maxHp} · Charges ${p.charges}/${p.maxCharges}</p><div class="build-mods">${run.relics.length ? run.relics.map((id) => " <div><h3>" + UPGRADES[id].name + "</h3><p>" + UPGRADES[id].text + "</p></div>").join("") : "<p>Secure an uplink to install your first modification.</p>"}</div><div class="guide-next">${button("return", "Return to actions", "No turn spent", true)}</div></section>`;
+  return `<section class="screen" data-screen="build">${heading("TIME IS HELD", k.name + " build", k.passive)}<p class="build-stats">Attack ${p.attack} · Pulse ${p.pulseDamage} damage / ${p.pulseRange} tiles<br>Hull ${p.hp}/${p.maxHp} · Charges ${p.charges}/${p.maxCharges}</p><div class="build-mods">${run.relics.length ? run.relics.map((id) => " <div><h3>" + UPGRADES[id].name + "</h3><p>" + UPGRADES[id].text + "</p></div>").join("") : "<p>Secure an uplink to install your first modification.</p>"}</div><div class="guide-next">${button("return", "Return to options", "No turn spent", true)}</div></section>`;
 }
 function start(kit) {
   if (!kitUnlocked(profile, kit)) return;
@@ -293,6 +316,7 @@ function start(kit) {
   }
 }
 function dispatch(action) {
+  if (pendingAction || (action === "pulse" && !run.player.charges)) return;
   if (action.startsWith("encounter:")) {
     chooseEncounter(run, action.slice(10));
     audio.play(actionEvents(run));
@@ -317,7 +341,9 @@ function dispatch(action) {
         ". Every run contributes.";
       render();
     }
-  } else if (action === "build") go("build");
+  } else if (action === "more") go("more");
+  // Modal subviews share one entry, including after a restart through Field kit.
+  else if (action === "build") go("build", true);
   else if (action === "resume") go("mission");
   else if (action === "kit") go("kit");
   else if (action === "guide") {
@@ -337,8 +363,10 @@ function dispatch(action) {
     } catch {}
     audio.play(["arrival"]);
     render();
-  } else if (action === "return") back();
-  else if (action === "pulse" || action === "wait") {
+  } else if (action === "return") {
+    if (screen === "build") go("more", true);
+    else back();
+  } else if (action === "pulse" || action === "wait") {
     // Restore the mission entry before spending the turn, preserving shallow native Back.
     pendingAction = action;
     back();
@@ -363,7 +391,7 @@ app.addEventListener("click", (e) => {
   if (b) dispatch(b.dataset.action);
 });
 app.addEventListener("focusin", (e) => {
-  const buttons = [...app.querySelectorAll("button")];
+  const buttons = menuButtons();
   const i = buttons.indexOf(e.target);
   if (i >= 0) focusIndex = i;
   const kit = e.target.dataset.action?.startsWith("kit:")
@@ -381,9 +409,18 @@ const filter = createInputFilter();
 addEventListener(
   "keydown",
   (e) => {
+    if (e.key === "Tab" && app.querySelector('[role="dialog"]')) {
+      e.preventDefault();
+      const buttons = menuButtons();
+      focusIndex =
+        (focusIndex + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
+      buttons[focusIndex]?.focus({ preventScroll: true });
+      return;
+    }
     const decoded = decodeKey(e);
     if (decoded && (decoded !== "back" || screen !== "title"))
       e.preventDefault();
+    if (pendingAction) return;
     const action = filter(e);
     if (!action) return;
     lastKey = `${action} (${e.keyCode || e.key})`;
@@ -399,7 +436,7 @@ addEventListener(
       settleAction(action);
       return;
     }
-    const buttons = [...app.querySelectorAll("button")];
+    const buttons = menuButtons();
     if (action === "select") buttons[focusIndex]?.click();
     else {
       focusIndex =

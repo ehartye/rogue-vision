@@ -20,11 +20,13 @@ test("a run, action menu, build, and resume are usable with wrist-equivalent key
   await press(page, "ArrowRight");
   await expect(page.locator("[data-turn]")).not.toHaveText(before);
   await press(page, "Enter");
+  await expect(page.getByRole("button", { name: /^Pulse/ })).toBeFocused();
+  await press(page, "ArrowDown");
+  await press(page, "ArrowDown");
+  await press(page, "Enter");
   await expect(
-    page.getByRole("button", { name: /Discharge pulse/ }),
-  ).toBeFocused();
-  await press(page, "ArrowDown");
-  await press(page, "ArrowDown");
+    page.getByRole("dialog", { name: "Expedition options" }),
+  ).toBeVisible();
   await press(page, "Enter");
   await expect(
     page.getByRole("heading", { name: "Courier build" }),
