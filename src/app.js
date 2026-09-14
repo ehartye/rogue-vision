@@ -12,6 +12,7 @@ import {
 import {
   newRun,
   act,
+  actionEvents,
   chooseUpgrade,
   chooseEncounter,
   LANDMARKS,
@@ -22,6 +23,8 @@ import {
 } from "./game.js";
 import { createInputFilter, decodeKey } from "./input.js";
 import { drawMap, drawSkyline, mapDescription } from "./render.js";
+import { createAudio } from "./audio.js";
+const audio = createAudio();
 const app = document.querySelector("#app"),
   SAVE = "fogfall.run.v1",
   STATS = "fogfall.stats.v1",
@@ -32,7 +35,6 @@ let run = null,
   renderMs = 0,
   lastKey = "None yet",
   sound = false,
-  audio = null,
   guidePage = 0;
 let profile = newProfile(),
   recoveryNotice = "",
@@ -61,6 +63,7 @@ try {
   storageOk = false;
   saveState = "Saving unavailable";
 }
+audio.setEnabled(sound);
 const esc = (value) =>
   String(value).replace(
     /[&<>"']/g,
@@ -120,7 +123,7 @@ addEventListener("popstate", (e) => {
 function settleAction(action) {
   act(run, action);
   persist();
-  beep(run.event);
+  audio.play(actionEvents(run));
   render();
 }
 function render() {
@@ -276,6 +279,7 @@ function start(kit) {
   if (!kitUnlocked(profile, kit)) return;
   run = newRun(crypto.getRandomValues(new Uint32Array(1))[0], kit);
   run.id = crypto.randomUUID();
+  audio.play(["arrival"]);
   trackRun(profile, run);
   persist();
   if (screen === "title") go("mission");
@@ -289,6 +293,7 @@ function start(kit) {
 function dispatch(action) {
   if (action.startsWith("encounter:")) {
     chooseEncounter(run, action.slice(10));
+    audio.play(actionEvents(run));
     focusIndex = 0;
     persist();
     render();
@@ -324,10 +329,11 @@ function dispatch(action) {
   } else if (action === "diagnostics") go("diagnostics");
   else if (action === "sound") {
     sound = !sound;
+    audio.setEnabled(sound);
     try {
       localStorage.setItem("fogfall.sound", sound ? "on" : "off");
     } catch {}
-    beep("pickup");
+    audio.play(["arrival"]);
     render();
   } else if (action === "return") back();
   else if (action === "pulse" || action === "wait") {
@@ -338,7 +344,7 @@ function dispatch(action) {
     chooseUpgrade(run, action.slice(8));
     focusIndex = 0;
     persist();
-    beep("pickup");
+    audio.play(actionEvents(run));
     render();
   }
 }
@@ -400,53 +406,21 @@ addEventListener(
           buttons.length) %
         buttons.length;
       buttons[focusIndex]?.focus({ preventScroll: true });
-      beep("focus");
+      audio.play(["focus"]);
     }
   },
   true,
 );
-function beep(event) {
-  if (!sound) return;
-  try {
-    const Audio = window.AudioContext || window.webkitAudioContext;
-    if (!Audio) return;
-    audio ??= new Audio();
-    if (audio.state === "suspended") audio.resume().catch(() => {});
-    const o = audio.createOscillator(),
-      g = audio.createGain(),
-      now = audio.currentTime;
-    const freq =
-      {
-        focus: 280,
-        move: 160,
-        hit: 110,
-        damage: 70,
-        pulse: 520,
-        kill: 640,
-        pickup: 780,
-        blocked: 90,
-        dead: 55,
-      }[event] ?? 340;
-    o.type = "sine";
-    o.frequency.setValueAtTime(freq, now);
-    o.frequency.exponentialRampToValueAtTime(freq * 0.6, now + 0.1);
-    g.gain.setValueAtTime(0.025, now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-    o.connect(g);
-    g.connect(audio.destination);
-    o.start(now);
-    o.stop(now + 0.13);
-  } catch {
-    /* Audio is optional; gameplay remains independent of audio support. */
-  }
-}
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     persist();
-    audio?.suspend().catch(() => {});
+    audio.suspend();
   }
 });
-addEventListener("pagehide", persist);
+addEventListener("pagehide", () => {
+  persist();
+  audio.suspend();
+});
 function cacheLabel(label) {
   cacheState = label;
   for (const node of app.querySelectorAll("[data-offline]"))
