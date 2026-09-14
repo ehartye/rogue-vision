@@ -301,7 +301,7 @@ export function markdown(report) {
     "",
     `Policy version ${report.policyVersion}; ${report.rows.length} primary runs; seeds start at ${report.inputs.seed}; turn cap ${report.inputs.maxTurns}.`,
     "",
-    "Bots are reproducible strategy probes, not calibrated human skill levels. Unfinished runs are not losses. Distributions include capped observations and do not estimate full run lifetimes. No difficulty constants were changed.",
+    "Bots are reproducible strategy probes, not calibrated human skill levels. Unfinished runs are not losses. Distributions include capped observations and do not estimate full run lifetimes. The harness uses the production rules without modifying them.",
     "",
     "| Kit | Policy | Runs | Wins | Deaths | Capped | Stalled | Observed wins | Mean damage |",
     "|---|---|---:|---:|---:|---:|---:|---:|---:|",
