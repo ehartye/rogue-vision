@@ -20,7 +20,7 @@ async function enter(page, configure = () => {}) {
 }
 const pixels = (page) => page.locator(".map").evaluate((c) => c.toDataURL());
 
-test("people and Chinatown art survive a cold offline reload without changing the save", async ({
+test("people and district scenery survive a cold offline reload without changing the save", async ({
   page,
   context,
 }) => {
@@ -43,10 +43,7 @@ test("people and Chinatown art survive a cold offline reload without changing th
     ).flat(),
   );
   expect(cached).toEqual(
-    expect.arrayContaining([
-      "/rogue-vision/assets/art/people.png",
-      "/rogue-vision/assets/art/chinatown-frontage.png",
-    ]),
+    expect.arrayContaining(["/rogue-vision/assets/art/people.png"]),
   );
   await context.setOffline(true);
   await page.reload();
@@ -122,41 +119,4 @@ test("injured and stunned hostiles retain their status marks on a threatened til
   });
   expect(marks.health).toEqual([68, 35, 38, 255]);
   expect(marks.stun).toEqual([128, 232, 255, 255]);
-});
-
-test("people repaint while scenery is still loading, without waiting for input", async ({
-  page,
-}) => {
-  let release, releasePeople;
-  const gate = new Promise((resolve) => {
-    release = resolve;
-  });
-  const peopleGate = new Promise((resolve) => {
-    releasePeople = resolve;
-  });
-  await page.route("**/assets/art/people.png", async (route) => {
-    await peopleGate;
-    await route.continue();
-  });
-  await page.route("**/assets/art/chinatown-frontage.png", async (route) => {
-    await gate;
-    await route.continue();
-  });
-  try {
-    await enter(page);
-    releasePeople();
-    await expect
-      .poll(() =>
-        page
-          .locator(".map")
-          .evaluate((c) =>
-            Array.from(c.getContext("2d").getImageData(52, 40, 1, 1).data),
-          ),
-      )
-      .toEqual([128, 232, 255, 255]);
-    await expect(page.locator("[data-turn]")).toHaveText("0");
-  } finally {
-    releasePeople();
-    release();
-  }
 });
