@@ -1,4 +1,10 @@
 import { DISTRICTS } from "./game.js";
+import {
+  artReady,
+  drawSprite,
+  drawChinatownWall,
+  drawChinatownStreet,
+} from "./art.js";
 const C = {
   ice: "#80e8ff",
   white: "#effcff",
@@ -177,6 +183,7 @@ export function drawMap(canvas, s) {
   const start = performance.now(),
     c = canvas.getContext("2d");
   c.clearRect(0, 0, 396, 396);
+  canvas.dataset.art = artReady() ? "ready" : "fallback";
   c.lineCap = "square";
   const threats = new Set(
     s.enemies.flatMap((e) => e.intent.map((p) => `${p.x},${p.y}`)),
@@ -193,6 +200,7 @@ export function drawMap(canvas, s) {
         continue;
       }
       if (s.tiles[y][x] === 1) {
+        if (s.floor === 1 && drawChinatownWall(c, s, x, y)) continue;
         const accent = ["#497a86", "#82704e", "#597568", "#6f6386"][s.floor];
         c.strokeStyle = visible ? accent : "#20343c";
         c.lineWidth = 2;
@@ -232,32 +240,27 @@ export function drawMap(canvas, s) {
           );
         }
       } else {
+        if (s.floor === 1) drawChinatownStreet(c, x, y, visible);
         c.fillStyle = visible ? "#48737d" : "#213a43";
         c.fillRect(px + 17, py + 17, 3, 3);
-        if (threats.has(`${x},${y}`) && visible) {
-          c.strokeStyle = C.red;
-          c.lineWidth = 3;
-          c.strokeRect(px + 2, py + 2, 32, 32);
-          line(
-            c,
-            [
-              [px + 6, py + 6],
-              [px + 12, py + 12],
-            ],
-            C.red,
-          );
-          line(
-            c,
-            [
-              [px + 30, py + 6],
-              [px + 24, py + 12],
-            ],
-            C.red,
-          );
-        }
       }
     }
-  if (s.landmark && !s.landmark.resolved) {
+  const gateDrawn =
+    s.floor === 1 &&
+    s.landmark &&
+    s.seen[s.landmark.y][s.landmark.x] &&
+    drawSprite(
+      c,
+      "dragon-gate",
+      s.landmark.x * 36,
+      s.landmark.y * 36,
+      s.landmark.resolved
+        ? 0.4
+        : s.visible[s.landmark.y][s.landmark.x]
+          ? 1
+          : 0.5,
+    );
+  if (s.landmark && !s.landmark.resolved && !gateDrawn) {
     const x = s.landmark.x * 36 + 18,
       y = s.landmark.y * 36 + 18;
     c.strokeStyle = C.gold;
@@ -361,7 +364,16 @@ export function drawMap(canvas, s) {
       c.strokeStyle = C.red;
       c.fillStyle = C.red;
       c.lineWidth = 3;
-      if (e.kind === "runner") {
+      if (
+        drawSprite(
+          c,
+          e.kind === "spitter" ? "relay" : e.kind,
+          e.x * 36,
+          e.y * 36,
+        )
+      ) {
+        // Status marks below remain shared with the vector fallback.
+      } else if (e.kind === "runner") {
         line(
           c,
           [
@@ -436,19 +448,21 @@ export function drawMap(canvas, s) {
     }
   const x = s.player.x * 36 + 18,
     y = s.player.y * 36 + 18;
-  c.fillStyle = C.gold;
-  c.beginPath();
-  c.moveTo(x, y - 14);
-  c.lineTo(x + 12, y - 4);
-  c.lineTo(x + 10, y + 11);
-  c.lineTo(x - 10, y + 11);
-  c.lineTo(x - 12, y - 4);
-  c.closePath();
-  c.fill();
-  c.fillStyle = "#000";
-  c.fillRect(x - 7, y - 4, 14, 5);
-  c.fillStyle = C.white;
-  c.fillRect(x - 3, y - 3, 6, 3);
+  if (!drawSprite(c, "courier", s.player.x * 36, s.player.y * 36)) {
+    c.fillStyle = C.gold;
+    c.beginPath();
+    c.moveTo(x, y - 14);
+    c.lineTo(x + 12, y - 4);
+    c.lineTo(x + 10, y + 11);
+    c.lineTo(x - 10, y + 11);
+    c.lineTo(x - 12, y - 4);
+    c.closePath();
+    c.fill();
+    c.fillStyle = "#000";
+    c.fillRect(x - 7, y - 4, 14, 5);
+    c.fillStyle = C.white;
+    c.fillRect(x - 3, y - 3, 6, 3);
+  }
   line(
     c,
     [
@@ -458,6 +472,32 @@ export function drawMap(canvas, s) {
     C.gold,
     3,
   );
+  // Tactical warnings always win over people, supplies and landmark artwork.
+  for (const key of threats) {
+    const [tx, ty] = key.split(",").map(Number);
+    if (!s.visible[ty]?.[tx] || s.tiles[ty]?.[tx] !== 0) continue;
+    const px = tx * 36,
+      py = ty * 36;
+    c.strokeStyle = C.red;
+    c.lineWidth = 3;
+    c.strokeRect(px + 2, py + 2, 32, 32);
+    line(
+      c,
+      [
+        [px + 6, py + 6],
+        [px + 12, py + 12],
+      ],
+      C.red,
+    );
+    line(
+      c,
+      [
+        [px + 30, py + 6],
+        [px + 24, py + 12],
+      ],
+      C.red,
+    );
+  }
   return performance.now() - start;
 }
 export function mapDescription(s) {
