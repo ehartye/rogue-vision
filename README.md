@@ -54,6 +54,8 @@ Choose a starting kit before each new expedition. Courier is balanced and always
 
 The game waits indefinitely for input. Saves occur at completed turns and upgrade selections. No accounts, telemetry, server, phone controller, sensors, or runtime third-party downloads. Sound is optional and starts disabled. Field kit → Travel readiness reports local cache/save status and the last map draw time; this is not a hardware benchmark.
 
+New expeditions have more enemies in the first three districts, and ordinary enemies survive longer and hit harder. Attacks still warn before landing; dodge marked tiles or disrupt enemies with a pulse. Expeditions saved before this tuning retain their original balance when resumed, including future districts.
+
 Field kit → Sound enables distinct synthesized action cues. Damage and imminent strikes take priority; combined combat outcomes retain their meaning, landmark trades have acceptance/refusal feedback, and the signal motif marks district uplinks and resolves at victory. Muting or hiding the app cancels pending sounds. Audio uses no downloaded assets. Browser renders check output and release envelopes; audibility on the glasses still needs a device listening check.
 
 The lost-signal score develops that motif across four district arrangements at a fixed 72 BPM. Authored replies vary by run, with quiet space at phrase endings. Visible danger and hull pressure add texture; waiting to think never increases the tempo or advances the game. Music stops in menus, on mute and while hidden, and restarts without replaying missed notes. Action cues briefly lower the accompaniment.

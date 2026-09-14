@@ -32,9 +32,9 @@ test("measure actual healing and damage separately when both occur in one action
   assert.equal(typeof game.actionMetrics, "function");
   const s = arena();
   game.act(s, "right");
-  assert.equal(s.player.hp, 21);
+  assert.equal(s.player.hp, 19);
   assert.deepEqual(game.actionMetrics(s), {
-    damageTaken: 3,
+    damageTaken: 5,
     healing: 4,
     healingWasted: 2,
     hullSpent: 0,
@@ -214,7 +214,7 @@ test("a repeated dodge cycle is reported as a bot stall, not an impossible seed"
   const { simulate, replay } =
     await import("../scripts/balance/simulation.mjs");
   const row = simulate({
-    seed: 6,
+    seed: 7,
     kit: "relay",
     policy: "tactical",
     maxTurns: 400,
