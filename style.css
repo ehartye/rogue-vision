@@ -559,22 +559,6 @@ p {
   color: var(--gold);
   font-size: 16px;
 }
-.pulse-flash .map {
-  animation: pulse 0.24s ease-out;
-}
-.damage-flash .map {
-  animation: damage 0.2s ease-out;
-}
-@keyframes pulse {
-  50% {
-    filter: brightness(1.8);
-  }
-}
-@keyframes damage {
-  50% {
-    opacity: 0.45;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
