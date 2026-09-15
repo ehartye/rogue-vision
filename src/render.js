@@ -3,6 +3,7 @@ import { artReady, drawSprite } from "./art.js";
 import { drawScenery } from "./scenery.js";
 import { drawFerryBuilding } from "./waterfront.js";
 import { drawCableCar } from "./transit.js";
+import { drawDragonGate } from "./chinatown.js";
 import { drawMoscone } from "./moscone.js";
 const C = {
   ice: "#80e8ff",
@@ -188,23 +189,12 @@ export function drawMap(canvas, s) {
     s.enemies.flatMap((e) => e.intent.map((p) => `${p.x},${p.y}`)),
   );
   drawScenery(c, s);
-  const landmarkDrawn = drawFerryBuilding(c, s) || drawCableCar(c, s) || drawMoscone(c, s);
-  const gateDrawn =
-    s.floor === 1 &&
-    s.landmark &&
-    s.seen[s.landmark.y][s.landmark.x] &&
-    drawSprite(
-      c,
-      "dragon-gate",
-      s.landmark.x * 36,
-      s.landmark.y * 36,
-      s.landmark.resolved
-        ? 0.4
-        : s.visible[s.landmark.y][s.landmark.x]
-          ? 1
-          : 0.5,
-    );
-  if (s.landmark && !s.landmark.resolved && !gateDrawn && !landmarkDrawn) {
+  const landmarkDrawn =
+    drawFerryBuilding(c, s) ||
+    drawCableCar(c, s) ||
+    drawMoscone(c, s) ||
+    drawDragonGate(c, s);
+  if (s.landmark && !s.landmark.resolved && !landmarkDrawn) {
     const x = s.landmark.x * 36 + 18,
       y = s.landmark.y * 36 + 18;
     c.strokeStyle = C.gold;
@@ -473,6 +463,10 @@ export function drawMap(canvas, s) {
 }
 export function mapDescription(s) {
   const nearby = s.enemies.filter((e) => s.visible[e.y][e.x]);
+  const gate =
+    s.floor === 1 && s.landmark
+      ? ` Dragon Gate at column ${s.landmark.x}, row ${s.landmark.y}: ${s.landmark.resolved ? "visited." : "Enter its square to inspect the optional recharge choice."}`
+      : "";
   const registration =
     s.floor === 3 && s.landmark
       ? ` Moscone registration at column ${s.landmark.x}, row ${s.landmark.y}: ${s.landmark.resolved ? "visited." : "Enter its square to inspect the badge choice."}`
@@ -488,5 +482,5 @@ export function mapDescription(s) {
   const relay = s.relay
     ? ` Lantern relay at column ${s.relay.x}, row ${s.relay.y}: ${s.relay.progress}/3. Stand there for three turns or pulse within range to power the uplink.`
     : "";
-  return `${DISTRICTS[s.floor].name}. You are at column ${s.player.x}, row ${s.player.y}. ${nearby.length} visible hostiles. Uplink at column 9, row 9.${ferry}${transit}${registration}${relay} ${s.message}`;
+  return `${DISTRICTS[s.floor].name}. You are at column ${s.player.x}, row ${s.player.y}. ${nearby.length} visible hostiles. Uplink at column 9, row 9.${ferry}${transit}${registration}${gate}${relay} ${s.message}`;
 }

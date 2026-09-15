@@ -86,6 +86,8 @@ Preview at `http://127.0.0.1:4173/rogue-vision/`. Rebuild after editing. Arrow k
 
 `src/waterfront.js` draws Embarcadero's Ferry Building clock tower, seawall and warehouse elevations. The tower marks the existing optional supply interaction; its gold threshold identifies the enterable square. The public beacon remains visible through fog, visited buildings become dim, and artwork stays below people and attack warnings.
 
+`src/chinatown.js` preserves the Dragon Gate sprite with a public fallback and gold entrance marks, and varies discovered shop fronts with shutters, produce stalls, lattice windows and muted lanterns. The optional gate and required lantern relay have separate labels.
+
 `src/moscone.js` draws the registration entrance with glass doors, a sweeping canopy and gold threshold marks. Its public marker and dim visited state retain the existing badge encounter.
 
 `src/transit.js` draws the Powell cable car over its existing public boarding encounter, plus crossing fragments on discovered Market Street intersections. Gold platform marks identify the enterable square; visited cars remain dim.
