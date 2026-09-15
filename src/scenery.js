@@ -1,4 +1,5 @@
 import { drawWaterfrontEdge, drawWarehouse } from "./waterfront.js";
+import { drawChinatownShop } from "./chinatown.js";
 import { drawTransitCrossing } from "./transit.js";
 // Scenery reads only discovered terrain. It never consumes the simulation RNG
 // or writes to the run, so a reload (including an old save) keeps the same city.
@@ -221,6 +222,8 @@ function wall(c, s, x, y, p, known) {
     rect(c, p.edge, left, 33, right - left, 1);
     if (s.floor === 0) {
       drawWarehouse(c, p, v % 3, left, right);
+    } else if (s.floor === 1) {
+      drawChinatownShop(c, p, v % 4, left, right);
     } else if (s.floor === 3) {
       // Broad glazed bays under a continuous stone lintel.
       rect(c, p.trim, left, 14, right - left, 3);
@@ -245,15 +248,7 @@ function wall(c, s, x, y, p, known) {
         rect(c, awning === 1 ? p.accent : p.trim, left, 13, right - left, 4);
         for (let a = 4; a < 36; a += 8) rect(c, p.edge, a, 14, 2, 3);
       }
-      if (s.floor === 1 && v % 3 === 0) {
-        line(c, p.trim, [
-          [27, 16],
-          [27, 20],
-        ]);
-        rect(c, p.accent, 24, 20, 6, 7);
-        rect(c, p.light, 26, 21, 2, 5);
-        rect(c, p.trim, 26, 28, 2, 2);
-      }
+
     }
   }
   // Roof vocabulary reads across joined cells; equipment is deliberately sparse.
