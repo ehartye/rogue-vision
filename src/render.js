@@ -3,6 +3,7 @@ import { artReady, drawSprite } from "./art.js";
 import { drawScenery } from "./scenery.js";
 import { drawFerryBuilding } from "./waterfront.js";
 import { drawCableCar } from "./transit.js";
+import { drawMoscone } from "./moscone.js";
 const C = {
   ice: "#80e8ff",
   white: "#effcff",
@@ -187,7 +188,7 @@ export function drawMap(canvas, s) {
     s.enemies.flatMap((e) => e.intent.map((p) => `${p.x},${p.y}`)),
   );
   drawScenery(c, s);
-  const landmarkDrawn = drawFerryBuilding(c, s) || drawCableCar(c, s);
+  const landmarkDrawn = drawFerryBuilding(c, s) || drawCableCar(c, s) || drawMoscone(c, s);
   const gateDrawn =
     s.floor === 1 &&
     s.landmark &&
@@ -472,6 +473,10 @@ export function drawMap(canvas, s) {
 }
 export function mapDescription(s) {
   const nearby = s.enemies.filter((e) => s.visible[e.y][e.x]);
+  const registration =
+    s.floor === 3 && s.landmark
+      ? ` Moscone registration at column ${s.landmark.x}, row ${s.landmark.y}: ${s.landmark.resolved ? "visited." : "Enter its square to inspect the badge choice."}`
+      : "";
   const transit =
     s.floor === 2 && s.landmark
       ? ` Powell cable car at column ${s.landmark.x}, row ${s.landmark.y}: ${s.landmark.resolved ? "visited." : "Enter its square to inspect the boarding choice."}`
@@ -483,5 +488,5 @@ export function mapDescription(s) {
   const relay = s.relay
     ? ` Lantern relay at column ${s.relay.x}, row ${s.relay.y}: ${s.relay.progress}/3. Stand there for three turns or pulse within range to power the uplink.`
     : "";
-  return `${DISTRICTS[s.floor].name}. You are at column ${s.player.x}, row ${s.player.y}. ${nearby.length} visible hostiles. Uplink at column 9, row 9.${ferry}${transit}${relay} ${s.message}`;
+  return `${DISTRICTS[s.floor].name}. You are at column ${s.player.x}, row ${s.player.y}. ${nearby.length} visible hostiles. Uplink at column 9, row 9.${ferry}${transit}${registration}${relay} ${s.message}`;
 }
