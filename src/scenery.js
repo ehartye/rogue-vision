@@ -1,4 +1,5 @@
 import { drawWaterfrontEdge, drawWarehouse } from "./waterfront.js";
+import { drawTransitCrossing } from "./transit.js";
 // Scenery reads only discovered terrain. It never consumes the simulation RNG
 // or writes to the run, so a reload (including an old save) keeps the same city.
 const THEMES = [
@@ -336,6 +337,7 @@ function wall(c, s, x, y, p, known) {
 }
 
 function street(c, s, x, y, known) {
+  if (s.floor === 2) drawTransitCrossing(c, x, y, known);
   const ink = "#28454f";
   // Curbs belong to the known street, leaving its centre free for actors/items.
   if (known(x, y - 1, 1)) rect(c, ink, 3, 2, 30, 1);
