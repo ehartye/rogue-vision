@@ -86,6 +86,8 @@ Preview at `http://127.0.0.1:4173/rogue-vision/`. Rebuild after editing. Arrow k
 
 `src/waterfront.js` draws Embarcadero's Ferry Building clock tower, seawall and warehouse elevations. The tower marks the existing optional supply interaction; its gold threshold identifies the enterable square. The public beacon remains visible through fog, visited buildings become dim, and artwork stays below people and attack warnings.
 
+`src/moscone.js` draws the registration entrance with glass doors, a sweeping canopy and gold threshold marks. Its public marker and dim visited state retain the existing badge encounter.
+
 `src/transit.js` draws the Powell cable car over its existing public boarding encounter, plus crossing fragments on discovered Market Street intersections. Gold platform marks identify the enterable square; visited cars remain dim.
 
 `src/kits.js` defines starting equipment; `src/profile.js` keeps a separate versioned progression record. It awards positive run deltas once and retains the last durable run receipt until a replacement save succeeds. Legacy run saves and stats migrate locally. Tests cover failed writes between the profile and run snapshots, including repeated failed new-run attempts.
