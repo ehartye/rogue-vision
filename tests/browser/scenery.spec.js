@@ -24,12 +24,23 @@ function scene(floor) {
 async function open(page, s) {
   await page.goto("./");
   await page.evaluate(
-    (save) => localStorage.setItem("fogfall.run.v1", save),
+    (save) => sessionStorage.setItem("scenery-fixture", save),
     encodeSave(s),
   );
+  // pagehide persists the currently running scene. Apply each new fixture in
+  // the next document, so that persistence cannot replace it during reload.
+  await page.addInitScript(() => {
+    const save = sessionStorage.getItem("scenery-fixture");
+    if (save) localStorage.setItem("fogfall.run.v1", save);
+  });
   await page.reload();
   await page.getByRole("button", { name: "Resume expedition" }).click();
   await expect(page.locator(".map")).toHaveAttribute("data-art", "ready");
+  expect(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem("fogfall.run.v1")).state.floor,
+    ),
+  ).toBe(s.floor);
 }
 
 test("adjacent walls share a continuous structure in every district", async ({

@@ -1,3 +1,4 @@
+import { drawWaterfrontEdge, drawWarehouse } from "./waterfront.js";
 // Scenery reads only discovered terrain. It never consumes the simulation RNG
 // or writes to the run, so a reload (including an old save) keeps the same city.
 const THEMES = [
@@ -200,6 +201,7 @@ function frontage(c, s, x, y, p, known) {
 }
 
 function wall(c, s, x, y, p, known) {
+  if (s.floor === 0 && drawWaterfrontEdge(c, x, y)) return;
   const north = known(x, y - 1, 1),
     south = known(x, y + 1, 1),
     west = known(x - 1, y, 1),
@@ -217,20 +219,7 @@ function wall(c, s, x, y, p, known) {
     rect(c, p.trim, left, 30, right - left, 2);
     rect(c, p.edge, left, 33, right - left, 1);
     if (s.floor === 0) {
-      // Long corrugated pier sheds, loading doors and intermittent bollards.
-      for (let a = 7; a < 34; a += 8) rect(c, p.trim, a, 18, 1, 11);
-      if (v % 3 === 0) {
-        rect(c, "#172c34", 11, 18, 14, 12);
-        line(c, p.edge, [
-          [12, 29],
-          [12, 19],
-          [24, 19],
-          [24, 29],
-        ]);
-      } else {
-        rect(c, p.light, 9, 19, 5, 3);
-        rect(c, p.light, 22, 19, 5, 3);
-      }
+      drawWarehouse(c, p, v % 3, left, right);
     } else if (s.floor === 3) {
       // Broad glazed bays under a continuous stone lintel.
       rect(c, p.trim, left, 14, right - left, 3);
