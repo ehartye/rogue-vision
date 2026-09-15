@@ -84,6 +84,8 @@ Preview at `http://127.0.0.1:4173/rogue-vision/`. Rebuild after editing. Arrow k
 
 `src/game.js` owns the seeded simulation and versioned save validation; `src/input.js` handles wrist keyCode-first normalization and duplicate filtering; `src/render.js` draws tactical overlays and people from the offline atlas; `src/scenery.js` joins discovered walls into district-specific buildings with continuous roofs, varied shop fronts, loading bays, bay windows and civic canopies. Scenery never consumes game randomness or changes a saved run. `src/app.js` owns menus, persistence and shallow history. The build bundles fonts and produces a PNG icon and content-versioned offline shell. Service workers retain a coherent release until old tabs close and remove only this app's caches. The earlier Chinatown frontage PNG remains an authoring reference; the game no longer loads or caches the repeated tile.
 
+`src/waterfront.js` draws Embarcadero's Ferry Building clock tower, seawall and warehouse elevations. The tower marks the existing optional supply interaction; its gold threshold identifies the enterable square. The public beacon remains visible through fog, visited buildings become dim, and artwork stays below people and attack warnings.
+
 `src/kits.js` defines starting equipment; `src/profile.js` keeps a separate versioned progression record. It awards positive run deltas once and retains the last durable run receipt until a replacement save succeeds. Legacy run saves and stats migrate locally. Tests cover failed writes between the profile and run snapshots, including repeated failed new-run attempts.
 
 GitHub Actions runs unit and browser checks, then publishes `dist/` on `main`. Configure Pages to use GitHub Actions. No production Node server is needed.

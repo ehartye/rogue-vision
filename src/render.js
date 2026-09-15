@@ -1,6 +1,7 @@
 import { DISTRICTS } from "./game.js";
 import { artReady, drawSprite } from "./art.js";
 import { drawScenery } from "./scenery.js";
+import { drawFerryBuilding } from "./waterfront.js";
 const C = {
   ice: "#80e8ff",
   white: "#effcff",
@@ -185,6 +186,7 @@ export function drawMap(canvas, s) {
     s.enemies.flatMap((e) => e.intent.map((p) => `${p.x},${p.y}`)),
   );
   drawScenery(c, s);
+  const ferryDrawn = drawFerryBuilding(c, s);
   const gateDrawn =
     s.floor === 1 &&
     s.landmark &&
@@ -200,7 +202,7 @@ export function drawMap(canvas, s) {
           ? 1
           : 0.5,
     );
-  if (s.landmark && !s.landmark.resolved && !gateDrawn) {
+  if (s.landmark && !s.landmark.resolved && !gateDrawn && !ferryDrawn) {
     const x = s.landmark.x * 36 + 18,
       y = s.landmark.y * 36 + 18;
     c.strokeStyle = C.gold;
@@ -469,8 +471,12 @@ export function drawMap(canvas, s) {
 }
 export function mapDescription(s) {
   const nearby = s.enemies.filter((e) => s.visible[e.y][e.x]);
+  const ferry =
+    s.floor === 0 && s.landmark
+      ? ` Ferry Building at column ${s.landmark.x}, row ${s.landmark.y}: ${s.landmark.resolved ? "visited." : "Enter its square to inspect the ferry supplies."}`
+      : "";
   const relay = s.relay
     ? ` Lantern relay at column ${s.relay.x}, row ${s.relay.y}: ${s.relay.progress}/3. Stand there for three turns or pulse within range to power the uplink.`
     : "";
-  return `${DISTRICTS[s.floor].name}. You are at column ${s.player.x}, row ${s.player.y}. ${nearby.length} visible hostiles. Uplink at column 9, row 9.${relay} ${s.message}`;
+  return `${DISTRICTS[s.floor].name}. You are at column ${s.player.x}, row ${s.player.y}. ${nearby.length} visible hostiles. Uplink at column 9, row 9.${ferry}${relay} ${s.message}`;
 }
