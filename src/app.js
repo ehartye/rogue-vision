@@ -13,6 +13,7 @@ import {
   newRun,
   act,
   actionEvents,
+  combatEvents,
   chooseUpgrade,
   chooseEncounter,
   LANDMARKS,
@@ -25,12 +26,15 @@ import { createInputFilter, decodeKey } from "./input.js";
 import { drawMap, drawSkyline, mapDescription } from "./render.js";
 import { loadArt } from "./art.js";
 import { createAudio } from "./audio.js";
+import { createCombatEffects } from "./combat-effects.js";
 import { musicState } from "./score.js";
 const audio = createAudio();
-loadArt(() => {
+const effects = createCombatEffects({ redraw: drawCurrentMap });
+function drawCurrentMap() {
   const map = document.querySelector(".map");
-  if (map && run) renderMs = drawMap(map, run);
-});
+  if (map && run) renderMs = drawMap(map, run, effects.snapshot());
+}
+loadArt(drawCurrentMap);
 const app = document.querySelector("#app"),
   SAVE = "fogfall.run.v1",
   STATS = "fogfall.stats.v1",
@@ -130,12 +134,16 @@ addEventListener("popstate", (e) => {
   render();
 });
 function settleAction(action) {
+  effects.clear();
   act(run, action);
   persist();
-  audio.play(actionEvents(run));
+  const combat = combatEvents(run);
+  audio.play([...actionEvents(run), ...combat.filter(e => e.visible && ["shot", "blast"].includes(e.kind)).map(e => e.kind)]);
   render();
+  if (screen === "mission" && run.phase === "playing") effects.play(combat);
 }
 function render() {
+  if (screen !== "mission" || run?.phase !== "playing") effects.clear();
   if (!run && ["mission", "actions", "more", "build"].includes(screen))
     screen = "title";
   audio.setScene(screen === "mission" ? musicState(run) : null);
@@ -160,8 +168,6 @@ function render() {
       if (screen === "more")
         html += missionModal("Expedition options", moreScreen());
       if (screen === "build") html += missionModal("Your build", buildScreen());
-      if (run.event === "pulse") app.className = "pulse-flash";
-      if (run.event === "damage") app.className = "damage-flash";
     }
   } else if (screen === "loadout") html = loadoutScreen();
   else if (screen === "kit") {
@@ -175,7 +181,7 @@ function render() {
   app.innerHTML = html;
   const map = app.querySelector(".map");
   if (map) {
-    renderMs = drawMap(map, run);
+    renderMs = drawMap(map, run, effects.snapshot());
     map.focus({ preventScroll: true });
   }
   const skyline = app.querySelector(".skyline");
@@ -458,11 +464,13 @@ addEventListener(
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     persist();
+    effects.clear();
     audio.suspend();
   } else audio.resume();
 });
 addEventListener("pagehide", () => {
   persist();
+  effects.clear();
   audio.suspend();
 });
 function cacheLabel(label) {

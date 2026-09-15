@@ -4,6 +4,7 @@ import { drawScenery } from "./scenery.js";
 import { drawFerryBuilding } from "./waterfront.js";
 import { drawCableCar } from "./transit.js";
 import { drawDragonGate } from "./chinatown.js";
+import { drawCombatEffects } from "./combat-effects.js";
 import { drawMoscone } from "./moscone.js";
 const C = {
   ice: "#80e8ff",
@@ -179,11 +180,12 @@ export function drawSkyline(canvas, won = false) {
   c.fillRect(296, 7, 12, 5);
   c.fillRect(298, 4, 8, 11);
 }
-export function drawMap(canvas, s) {
+export function drawMap(canvas, s, effects = null) {
   const start = performance.now(),
     c = canvas.getContext("2d");
   c.clearRect(0, 0, 396, 396);
   canvas.dataset.art = artReady() ? "ready" : "fallback";
+  canvas.dataset.effects = effects ? effects.events.map(e => e.kind).join(" ") : "";
   c.lineCap = "square";
   const threats = new Set(
     s.enemies.flatMap((e) => e.intent.map((p) => `${p.x},${p.y}`)),
@@ -416,7 +418,8 @@ export function drawMap(canvas, s) {
     C.gold,
     3,
   );
-  // Tactical warnings always win over people, supplies and landmark artwork.
+  drawCombatEffects(c, s, effects);
+  // Tactical warnings always win over people, effects and landmark artwork.
   for (const key of threats) {
     const [tx, ty] = key.split(",").map(Number);
     if (!s.visible[ty]?.[tx] || s.tiles[ty]?.[tx] !== 0) continue;
@@ -448,10 +451,12 @@ export function drawMap(canvas, s) {
     if (!s.visible[e.y][e.x]) continue;
     const x = e.x * 36 + 18,
       y = e.y * 36 + 18;
-    if (e.hp < e.maxHp) {
+    {
+      c.fillStyle = "#000";
+      c.fillRect(x - 13, y + 13, 26, 5);
       c.fillStyle = "#442326";
       c.fillRect(x - 12, y + 14, 24, 3);
-      c.fillStyle = C.red;
+      c.fillStyle = e.hp < e.maxHp ? C.red : "#a7c5b9";
       c.fillRect(x - 12, y + 14, (24 * e.hp) / e.maxHp, 3);
     }
     if (e.stun) {

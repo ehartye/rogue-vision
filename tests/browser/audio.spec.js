@@ -101,6 +101,108 @@ test("mute and backgrounding discard a pending resume instead of replaying stale
   expect(result).toEqual({ afterMute: 0, afterHidden: 0 });
 });
 
+test("battle textures are deterministic, cached per context, and three-cue mixes stay bounded", async ({
+  page,
+}) => {
+  await harness(page);
+  const result = await page.evaluate(async () => {
+    async function render() {
+      const ctx = new OfflineAudioContext(1, 24000 * 2, 24000);
+      let buffers = 0,
+        texture;
+      const create = ctx.createBuffer.bind(ctx);
+      ctx.createBuffer = (...args) => {
+        buffers++;
+        texture = create(...args);
+        return texture;
+      };
+      ["damage", "pulse", "blast"].forEach((id, i) =>
+        audioTest.schedulePatch(
+          ctx,
+          ctx.destination,
+          audioTest.PATCHES[id],
+          0.05 + i * 0.18,
+        ),
+      );
+      return {
+        data: (await ctx.startRendering()).getChannelData(0),
+        buffers,
+        texture: texture.getChannelData(0),
+      };
+    }
+    const first = await render(),
+      second = await render();
+    return {
+      buffers: [first.buffers, second.buffers],
+      identical: first.texture.every((x, i) => x === second.texture[i]),
+      // Native mixing can differ by one float rounding bit between contexts.
+      maxDifference: Math.max(
+        ...first.data.map((x, i) => Math.abs(x - second.data[i])),
+      ),
+      finite: first.data.every(Number.isFinite),
+      peak: Math.max(...first.data.map(Math.abs)),
+      tail: Math.max(...first.data.slice(-1000).map(Math.abs)),
+    };
+  });
+  expect(result.buffers).toEqual([1, 1]);
+  expect(result.identical).toBe(true);
+  expect(result.maxDifference).toBeLessThan(0.0000001);
+  expect(result.finite).toBe(true);
+  expect(result.peak).toBeGreaterThan(0.02);
+  expect(result.peak).toBeLessThan(0.2);
+  expect(result.tail).toBe(0);
+});
+
+test("muting stops and releases noise voices as well as pitched voices", async ({
+  page,
+}) => {
+  await harness(page);
+  const result = await page.evaluate(async () => {
+    const ctx = new AudioContext();
+    await ctx.resume();
+    const sources = [];
+    for (const method of ["createOscillator", "createBufferSource"]) {
+      const create = ctx[method].bind(ctx);
+      ctx[method] = () => {
+        const source = create(),
+          stop = source.stop.bind(source),
+          disconnect = source.disconnect.bind(source);
+        const record = { method, stops: 0, released: false };
+        sources.push(record);
+        source.stop = (at) => {
+          record.stops++;
+          return stop(at);
+        };
+        source.disconnect = () => {
+          record.released = true;
+          return disconnect();
+        };
+        return source;
+      };
+    }
+    const audio = audioTest.createAudio({
+      createContext: () => ctx,
+      isHidden: () => false,
+    });
+    audio.setEnabled(true);
+    await audio.play(["blast"]);
+    audio.setEnabled(false);
+    // Resume the context to deliver the stopped sources' asynchronous ended events.
+    await ctx.resume();
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    await ctx.close();
+    return sources;
+  });
+  expect(result).toHaveLength(3);
+  expect(result.filter((s) => s.method === "createBufferSource")).toHaveLength(
+    1,
+  );
+  for (const source of result) {
+    expect(source.stops).toBe(2);
+    expect(source.released).toBe(true);
+  }
+});
+
 test("menu focus cannot truncate a milestone resolution", async ({ page }) => {
   await harness(page);
   const result = await page.evaluate(async () => {

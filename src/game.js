@@ -294,6 +294,14 @@ export function reveal(s) {
 // while consumers can observe simultaneous results without changing saved runs.
 const outcomes = new WeakMap();
 const metrics = new WeakMap();
+const combat = new WeakMap();
+const point = ({ x, y }) => ({ x, y });
+export function combatEvents(s) {
+  return structuredClone(combat.get(s) ?? []);
+}
+function combatEvent(s, event) {
+  combat.get(s).push(event);
+}
 const emptyMetrics = () => ({
   damageTaken: 0,
   healing: 0,
@@ -349,8 +357,18 @@ function enemyTurn(s) {
       continue;
     }
     if (e.intent.length) {
+      for (const target of e.intent)
+        combatEvent(s, {
+          kind: e.kind === "spitter" ? "shot" : e.kind === "conductor" ? "blast" : "swipe",
+          from: point(e), to: point(target),
+          visible: Boolean(s.visible[e.y]?.[e.x] && s.visible[target.y]?.[target.x]),
+        });
       if (e.intent.some((p) => same(p, s.player))) {
         const { name, damage } = enemyStats(s, e.kind);
+        combatEvent(s, {
+          kind: "damage", to: point(s.player),
+          amount: Math.min(s.player.hp, damage), visible: true,
+        });
         metrics.get(s).damageTaken += Math.min(s.player.hp, damage);
         s.player.hp = Math.max(0, s.player.hp - damage);
         s.message = `${name} hit for ${damage}. Move off marked tiles.`;
@@ -424,6 +442,7 @@ function enemyTurn(s) {
 export function act(s, action) {
   outcomes.set(s, new Set());
   metrics.set(s, emptyMetrics());
+  combat.set(s, []);
   if (s.phase !== "playing") return false;
   const wasThreatened = threatened(s);
   let melee = false;
@@ -445,6 +464,10 @@ export function act(s, action) {
         (enemy.stun > 0
           ? 3 * s.relics.filter((r) => r === "aftershock").length
           : 0);
+      combatEvent(s, {
+        kind: "melee", from: point(s.player), to: point(enemy),
+        amount: Math.min(enemy.hp, damage), visible: true,
+      });
       enemy.hp -= damage;
       s.meleeHits = (s.meleeHits ?? 0) + 1;
       if (s.meleeHits % 2 === 0)
@@ -468,8 +491,13 @@ export function act(s, action) {
     s.player.charges--;
     s.event = "pulse";
     s.message = "Pulse released. Nearby hostiles disrupted.";
+    combatEvent(s, { kind: "pulse", from: point(s.player), range: s.player.pulseRange, visible: true });
     for (const e of s.enemies)
       if (distance(e, s.player) <= s.player.pulseRange) {
+        combatEvent(s, {
+          kind: "impact", to: point(e), amount: Math.min(e.hp, s.player.pulseDamage),
+          visible: Boolean(s.visible[e.y]?.[e.x]),
+        });
         e.hp -= s.player.pulseDamage;
         e.stun = 2;
         e.intent = [];
@@ -561,6 +589,7 @@ export function act(s, action) {
 export function chooseEncounter(s, choice) {
   outcomes.set(s, new Set());
   metrics.set(s, emptyMetrics());
+  combat.set(s, []);
   if (
     s.phase !== "encounter" ||
     !s.landmark ||
@@ -627,6 +656,7 @@ export function chooseEncounter(s, choice) {
 export function chooseUpgrade(s, id) {
   outcomes.set(s, new Set());
   metrics.set(s, emptyMetrics());
+  combat.set(s, []);
   if (s.phase !== "upgrade" || !s.choices.includes(id)) return false;
   const p = s.player;
   if (id === "blade") p.attack++;
