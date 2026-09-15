@@ -2,6 +2,28 @@ import { PATCHES, selectCues } from "./audio-cues.js";
 import { createTransport } from "./score-transport.js";
 
 const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
+const noiseBuffers = new WeakMap();
+
+function noiseBuffer(context) {
+  if (!noiseBuffers.has(context)) {
+    const buffer = context.createBuffer(
+      1,
+      context.sampleRate,
+      context.sampleRate,
+    );
+    const data = buffer.getChannelData(0);
+    // Local deterministic texture: never consume the expedition's RNG.
+    let seed = 0x51f15e;
+    for (let i = 0; i < data.length; i++) {
+      seed ^= seed << 13;
+      seed ^= seed >>> 17;
+      seed ^= seed << 5;
+      data[i] = (seed >>> 0) / 0x80000000 - 1;
+    }
+    noiseBuffers.set(context, buffer);
+  }
+  return noiseBuffers.get(context);
+}
 
 export function duckMusic(gain, now, duration) {
   gain.cancelAndHoldAtTime(now);
@@ -23,16 +45,33 @@ export function schedulePatch(
 ) {
   const voices = new Set();
   for (const note of patch) {
-    const oscillator = context.createOscillator();
+    const isNoise = note.type === "noise";
+    const oscillator = isNoise
+      ? context.createBufferSource()
+      : context.createOscillator();
     const gain = context.createGain();
     const start = when + note.at,
       end = start + note.duration;
-    oscillator.type = note.type;
-    oscillator.frequency.setValueAtTime(hz(note.midi), start);
-    oscillator.frequency.exponentialRampToValueAtTime(
-      hz(note.end ?? note.midi),
-      end,
-    );
+    let filter;
+    if (isNoise) {
+      oscillator.buffer = noiseBuffer(context);
+      oscillator.loop = true;
+      filter = context.createBiquadFilter();
+      filter.type = note.filter;
+      filter.Q.value = 0.7;
+      filter.frequency.setValueAtTime(note.frequency, start);
+      filter.frequency.exponentialRampToValueAtTime(note.endFrequency, end);
+      oscillator.connect(filter);
+      filter.connect(gain);
+    } else {
+      oscillator.type = note.type;
+      oscillator.frequency.setValueAtTime(hz(note.midi), start);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        hz(note.end ?? note.midi),
+        end,
+      );
+      oscillator.connect(gain);
+    }
     gain.gain.setValueAtTime(0, start);
     gain.gain.linearRampToValueAtTime(
       note.gain,
@@ -40,12 +79,12 @@ export function schedulePatch(
     );
     gain.gain.exponentialRampToValueAtTime(0.0001, end);
     gain.gain.linearRampToValueAtTime(0, end + 0.008);
-    oscillator.connect(gain);
     gain.connect(destination);
     const voice = { oscillator, gain };
     voices.add(voice);
     oscillator.onended = () => {
       oscillator.disconnect();
+      filter?.disconnect();
       gain.disconnect();
       voices.delete(voice);
       if (!voices.size) onEnded();
