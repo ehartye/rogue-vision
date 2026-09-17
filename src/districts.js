@@ -42,6 +42,17 @@ export function generateDistrict(floor, random) {
         [2, 9],
       ];
   for (const [x, y] of pocketWalls) tiles[y][x] = 1;
+  // Entering a live uplink ends the district, so the exit at (9,9) must be a
+  // terminal: every other street stays reachable with the exit sealed off.
+  function connected() {
+    const sealed = tiles.map((row) => [...row]);
+    sealed[9][9] = 1;
+    const reach = distances(sealed, { x: 1, y: 1 });
+    return (
+      reach.size === sealed.flat().filter((t) => t === 0).length &&
+      (reach.has("8,9") || reach.has("9,8"))
+    );
+  }
   function wall(x, y) {
     if (
       tiles[y]?.[x] !== 0 ||
@@ -51,11 +62,7 @@ export function generateDistrict(floor, random) {
     )
       return;
     tiles[y][x] = 1;
-    if (
-      distances(tiles, { x: 1, y: 1 }).size !==
-      tiles.flat().filter((t) => t === 0).length
-    )
-      tiles[y][x] = 0;
+    if (!connected()) tiles[y][x] = 0;
   }
   // Cut before the alcove's approach junction, so the cut cannot isolate it.
   wall(4 + Math.floor(random() * 2), 1);
