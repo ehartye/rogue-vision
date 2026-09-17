@@ -35,6 +35,17 @@ test("every district is connected, breaks both perimeter shortcuts, and has a re
       assert.equal(a.tiles[1][2], 0);
       assert.equal(a.tiles[2][2], 0);
       assert.equal(a.tiles[2][1], 0);
+      // Entering a live uplink ends the district, so no street may depend on
+      // walking through it: with the exit sealed, every other tile stays reachable.
+      const sealed = a.tiles.map((row) => [...row]);
+      sealed[9][9] = 1;
+      const withoutExit = distances(sealed, { x: 1, y: 1 });
+      assert.equal(
+        withoutExit.size,
+        sealed.flat().filter((t) => t === 0).length,
+        `floor ${floor} seed ${seed}: tiles reachable only through the uplink`,
+      );
+      assert.ok(withoutExit.has("8,9") || withoutExit.has("9,8"));
     }
   for (let floor = 1; floor < 4; floor++)
     assert.notDeepEqual(
